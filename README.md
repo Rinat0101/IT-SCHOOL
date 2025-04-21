@@ -24,3 +24,45 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 1. Need to create .env.local in root folder
 2. Add to .env.local two variables DATOCMS_API_KEY with API key to access the Project data and NEXTAUTH_SECRET to work auth
+
+## GraphQL Queries
+
+{
+  allCourses {
+    name
+    url
+    enabled
+  }
+  allModules {
+    name
+    enabled
+    orderColumn
+    course {
+      id
+    }
+  }
+  allWeeks {
+    name
+    orderColumn
+    module {
+      id
+    }
+  }
+  allDays {
+    name
+    orderColumn
+    week {
+      id
+    }
+  }
+  allLessons {
+    name
+    enabled
+    content {
+      __typename
+    }
+    day {
+      id
+    }
+  }
+}

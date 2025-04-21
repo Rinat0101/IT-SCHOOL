@@ -1,4 +1,5 @@
 import NextAuth from "next-auth";
+import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { GraphQLClient, gql } from "graphql-request";
 import bcrypt from "bcryptjs";
@@ -7,7 +8,7 @@ const client = new GraphQLClient("https://graphql.datocms.com/", {
   headers: { authorization: `Bearer ${process.env.DATOCMS_API_KEY}` },
 });
 
-export const authOptions = {
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -36,6 +37,20 @@ export const authOptions = {
       },
     }),
   ],
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user?.id) {
+        token.id = user.id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (token?.id && session.user) {
+        session.user.id = token.id as string;
+      }
+      return session;
+    },
+  },
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
 };

@@ -1,15 +1,40 @@
 @import "tailwindcss";
 
+/* Define Public Sans font */
+@font-face {
+  font-family: "Public Sans";
+  src: url("/fonts/PublicSans/static/PublicSans-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Public Sans";
+  src: url("/fonts/PublicSans/static/PublicSans-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Public Sans";
+  src: url("/fonts/PublicSans/static/PublicSans-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Custom Colors */
 :root {
   --background: #ffffff;
   --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --blue-1: #3880E8;
+  --blue-2: #1890FF;
+  --blue-3: #C8E7FA;
+  --gray-1: #919EAB;
+  --gray-2: #212B36;
+  --font-sans: 'Public Sans', sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -19,8 +44,55 @@
   }
 }
 
+/* Global Styles */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  font-style: black;
+}
+
+/* Shadows */
+.dialog-shadow {
+  box-shadow: 0 0.5rem 1rem 0 rgba(56, 128, 232, 0.24);
+}
+
+.shadow-light-mode {
+  box-shadow: 0 0.0625rem 0.125rem 0 rgba(145, 158, 171, 0.24);
+}
+
+.btn-shadow {
+  box-shadow: 0 8px 16px 0 rgba(56, 128, 232, 0.24);
+}
+
+.bg-blue-1 {
+  background-color: var(--blue-1);
+}
+
+.bg-blue-2 {
+  background-color: var(--blue-2);
+}
+
+.bg-blue-3 {
+  background-color: var(--blue-3);
+}
+
+.text-blue-1 {
+  color: var(--blue-1);
+}
+
+.text-blue-2 {
+  color: var(--blue-2);
+}
+
+.text-gray-1 {
+  color: var(--gray-1);
+}
+
+.text-black {
+  color: var(--foreground);
+}
+
+.text-gray-2 {
+  color: var(--gray-2);
 }

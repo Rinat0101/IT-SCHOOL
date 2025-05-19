@@ -1,0 +1,11 @@
+{
+      "pageTitle": "Courses",
+      "currentCourses": "Current courses",
+      "purchasedCourses": "Purchased courses",
+      "suggestedCourses": "Courses that will help you become a better person",
+      "suggested": {
+        "title": "Programming course",
+        "description": "Master your profession in 3 months and get new orders",
+        "buttonText": "Go Now"
+    }
+  }

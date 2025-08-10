@@ -17,7 +17,12 @@ const CourseSectionCard: React.FC<CourseSectionCardProps> = ({
   const offset = circumference - (completionPercentage / 100) * circumference;
 
   return (
-    <div className="rounded-2xl border border-gray-300 bg-white p-6 shadow-sm flex flex-col items-center text-center">
+    <div
+      className="rounded-2xl bg-white p-6 shadow-sm flex flex-col items-center text-center"
+      style={{
+        border: "1px solid rgba(145, 158, 171, 0.24)", 
+      }}
+    >
       <div className="relative w-42 h-42 mb-4">
         <svg width="100%" height="100%" viewBox="0 0 100 100">
           <circle
@@ -25,7 +30,7 @@ const CourseSectionCard: React.FC<CourseSectionCardProps> = ({
             cy="50"
             r={radius}
             fill="none"
-            stroke="#E5E7EB" 
+            stroke="#E5E7EB"
             strokeWidth={strokeWidth}
           />
           <circle
@@ -33,7 +38,7 @@ const CourseSectionCard: React.FC<CourseSectionCardProps> = ({
             cy="50"
             r={radius}
             fill="none"
-            stroke="url(#gradient)" 
+            stroke="url(#gradient)"
             strokeWidth={strokeWidth}
             strokeLinecap="round"
             strokeDasharray={circumference}

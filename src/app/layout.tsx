@@ -15,8 +15,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
 
   return (
     <html lang="en">
-      <body className="your-font-class bg-gray-50 min-h-screen flex flex-col antialiased">
-        <header className="w-full bg-gray-200 px-6 py-4 flex justify-end items-center shadow">
+      <body className="your-font-class bg-white min-h-screen flex flex-col antialiased">
+        <header className="w-full bg-white px-6 py-4 flex justify-end items-center shadow">
           {session?.user ? (
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-700">Hello, {session.user.email}</span>

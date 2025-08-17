@@ -302,62 +302,102 @@ export async function getSectionData(
   }
 }
 
-// Get Lesson's Content by Slugs
+// --- Get Lesson by slug ---
 
-export async function getLessonBySlugs(
-  courseSlug: string,
-  sectionSlug: string,
-  moduleSlug: string,
-  weekSlug: string,
-  daySlug: string,
-  lessonSlug: string
-): Promise<{
+type GqlLessonBySlugResp = {
   lesson: {
     id: string;
     title: string;
     slug: string;
     lessonType: Lesson["lessonType"];
     isMandatory: boolean;
-    content: DatoCmsLessonBlock[];
-    extraResources?: ExtraResourceBlock[];
+    order?: number | null;
+    content: any[]; // normalized below to DatoCmsLessonBlock[]
+    extraResources?: { title: string; url?: string | null }[] | null;
+    day: {
+      id: string;
+      title: string;
+      slug: string;
+      order: number;
+      lessons: {
+        id: string;
+        title: string;
+        slug: string;
+        lessonType: Lesson["lessonType"];
+        isMandatory: boolean;
+        order?: number | null;
+      }[];
+      // we still traverse to get course/section labels,
+      // but we won't expose week/module in the returned `day` object
+      week?: {
+        module?: {
+          section?: {
+            id: string;
+            title: string;
+            slug: string;
+            course?: {
+              id: string;
+              name: string;
+              slug: string;
+            };
+          };
+        };
+      };
+    } | null;
   } | null;
-  day: DayLite | null;
+};
+
+export async function getLessonBySlug(
+  lessonSlug: string
+): Promise<{
+  lesson:
+    | {
+        id: string;
+        title: string;
+        slug: string;
+        lessonType: Lesson["lessonType"];
+        isMandatory: boolean;
+        order?: number | null;
+        content: DatoCmsLessonBlock[];
+        extraResources?: ExtraResourceBlock[];
+      }
+    | null;
+  day:
+    | {
+        id: string;
+        title: string;
+        slug: string;
+        order: number;
+        lessons: {
+          id: string;
+          title: string;
+          slug: string;
+          lessonType: Lesson["lessonType"];
+          isMandatory: boolean;
+          order?: number | null;
+        }[];
+      }
+    | null;
+  // extra breadcrumb helpers (top‑level so you don’t need week/module)
   courseId: string | null;
+  courseTitle: string | null;
+  courseSlug: string | null;
+  sectionTitle: string | null;
+  sectionSlug: string | null;
 } | null> {
   try {
     const query = `
-      query GetLessonBySlugs(
-        $courseSlug: String,
-        $sectionSlug: String,
-        $moduleSlug: String,
-        $weekSlug: String,
-        $daySlug: String,
-        $lessonSlug: String
-      ) {
-        lesson(
-          filter: {
-            slug: { eq: $lessonSlug },
-            day: {
-              slug: { eq: $daySlug },
-              week: {
-                slug: { eq: $weekSlug },
-                module: {
-                  slug: { eq: $moduleSlug },
-                  section: {
-                    slug: { eq: $sectionSlug },
-                    course: { slug: { eq: $courseSlug } }
-                  }
-                }
-              }
-            }
-          }
-        ) {
+      query GetLessonBySlug($lessonSlug: String) {
+        lesson(filter: { slug: { eq: $lessonSlug } }) {
           id
           title
           slug
           lessonType
           isMandatory
+          order
+
           content {
+            __typename
             ... on TextBlockRecord {
               id
               title
@@ -365,6 +405,7 @@ export async function getLessonBySlugs(
               subsections {
                 ... on SubsectionRecord {
                   id
+                  title
                   text
                 }
               }
@@ -372,14 +413,12 @@ export async function getLessonBySlugs(
             ... on ImageBlockRecord {
               id
               title
-              image_content {
-                url
-              }
+              imageContent { url }
             }
             ... on VideoBlockRecord {
               id
               title
-              video_url
+              videoUrl { url provider thumbnailUrl }
             }
             ... on PresentationBlockRecord {
               id
@@ -389,52 +428,31 @@ export async function getLessonBySlugs(
             ... on AlertBlockRecord {
               id
               text
-              background_color
-              text_color
+              backgroundColor
+              textColor
             }
           }
+
           extraResources {
-            ... on ExtraResourceBlockRecord {
+            ... on ExtraResourceItemRecord {
               title
               url
             }
           }
-        }
 
-        day(
-          filter: {
-            slug: { eq: $daySlug },
-            week: {
-              slug: { eq: $weekSlug },
-              module: {
-                slug: { eq: $moduleSlug },
-                section: {
-                  slug: { eq: $sectionSlug },
-                  course: { slug: { eq: $courseSlug } }
-                }
-              }
-            }
-          }
-        ) {
-          id
-          title
-          slug
-          order
-          lessons {
+          day {
             id
             title
             slug
-            lessonType
-            isMandatory
-          }
-          parentWeek {
-            id
-            title
-            slug
-            module {
-              section {
-                course {
+            order
+            lessons { id title slug lessonType isMandatory order }
+            week {
+              module {
+                section {
                   id
+                  title
+                  slug
+                  course { id name slug }
                 }
               }
             }
@@ -443,37 +461,57 @@ export async function getLessonBySlugs(
       }
     `;
 
-    const variables = {
-      courseSlug,
-      sectionSlug,
-      moduleSlug,
-      weekSlug,
-      daySlug,
-      lessonSlug,
-    };
+    const data = await client.request<GqlLessonBySlugResp>(query, { lessonSlug });
+    const l = data.lesson;
+    if (!l) return { lesson: null, day: null, courseId: null, courseTitle: null, courseSlug: null, sectionTitle: null, sectionSlug: null };
 
-    const data = await client.request(query, variables);
-    const typedData = data as {
-      lesson: {
-        id: string;
-        title: string;
-        slug: string;
-        lessonType: Lesson["lessonType"];
-        isMandatory: boolean;
-        content: DatoCmsLessonBlock[];
-        extraResources?: ExtraResourceBlock[];
-      } | null;
-      day: DayLite | null;
-    };
+    // Pull breadcrumb helpers from nested path (if present)
+    const section = l.day?.week?.module?.section;
+    const course = section?.course;
+
+    const courseId = course?.id ?? null;
+    const courseTitle = course?.name ?? null;
+    const courseSlug = course?.slug ?? null;
+    const sectionTitle = section?.title ?? null;
+    const sectionSlug = section?.slug ?? null;
 
     return {
-      lesson: typedData.lesson,
-      day: typedData.day,
-      courseId:
-        (typedData.day as any)?.parentWeek?.module?.section?.course?.id ?? null,
+      lesson: {
+        id: l.id,
+        title: l.title,
+        slug: l.slug,
+        lessonType: l.lessonType,
+        isMandatory: !!l.isMandatory,
+        order: l.order ?? null,
+        content: (l.content ?? []) as DatoCmsLessonBlock[],
+        extraResources: (l.extraResources ?? []) as ExtraResourceBlock[],
+      },
+      // return a lean day object (no parentWeek/week/module)
+      day: l.day
+        ? {
+            id: l.day.id,
+            title: l.day.title,
+            slug: l.day.slug,
+            order: l.day.order,
+            lessons: l.day.lessons.map((x) => ({
+              id: x.id,
+              title: x.title,
+              slug: x.slug,
+              lessonType: x.lessonType,
+              isMandatory: x.isMandatory,
+              order: x.order ?? null,
+            })),
+          }
+        : null,
+
+      courseId,
+      courseTitle,
+      courseSlug,
+      sectionTitle,
+      sectionSlug,
     };
-  } catch (error) {
-    console.error("❌ Failed to fetch lesson by slugs:", error);
+  } catch (err) {
+    console.error("❌ getLessonBySlug failed:", err);
     return null;
   }
 }

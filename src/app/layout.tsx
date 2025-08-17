@@ -14,8 +14,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const session = await getServerSession(authOptions);
 
   return (
-    <html lang="en">
-      <body className="your-font-class bg-white min-h-screen flex flex-col antialiased">
+    <html lang="en" className="h-full">
+      <body className="m-0 min-h-screen flex flex-col antialiased">
         <header className="w-full bg-white px-6 py-4 flex justify-end items-center shadow">
           {session?.user ? (
             <div className="flex items-center gap-4">
@@ -26,7 +26,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             <span className="text-sm text-gray-500">Not logged in</span>
           )}
         </header>
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 p-0 m-0">{children}</main>
       </body>
     </html>
   );

@@ -1,49 +1,49 @@
+// components/Breadcrumbs.tsx
 "use client";
 
 import React from "react";
 import { useRouter } from "next/navigation";
 
-interface BreadcrumbProps {
-  courseSlug: string;
-  courseName: string;
-  currentPage?: string; // optional now
-}
+export type Crumb = {
+  label: string;   
+  href?: string;  
+};
 
-const Breadcrumbs: React.FC<BreadcrumbProps> = ({
-  courseSlug,
-  courseName,
-  currentPage,
-}) => {
+type Props = {
+  items: Crumb[];
+  className?: string;
+};
+
+const Breadcrumbs: React.FC<Props> = ({ items, className = "" }) => {
   const router = useRouter();
 
+  if (!items?.length) return null;
+
   return (
-    <nav className="text-sm text-gray-600 mb-4">
-      <ul className="flex items-center space-x-2">
-        {/* Courses root */}
-        <li
-          className="cursor-pointer hover:text-blue-500"
-          onClick={() => router.push("/courses")}
-        >
-          Courses
-        </li>
-        <li>&gt;</li>
+    <nav aria-label="Breadcrumb" className={`text-sm ${className}`}>
+      <ol className="flex items-center gap-2 text-gray-600">
+        {items.map((item, i) => {
+          const isLast = i === items.length - 1;
 
-        {/* Course page */}
-        <li
-          className="cursor-pointer hover:text-blue-500"
-          onClick={() => router.push(`/courses/${courseSlug}`)}
-        >
-          {courseName}
-        </li>
+          return (
+            <li key={`${item.label}-${i}`} className="flex items-center gap-2">
+              {item.href && !isLast ? (
+                <button
+                  type="button"
+                  onClick={() => router.push(item.href!)}
+                  className="hover:text-[#7E22CE] transition-colors"
+                >
+                  {item.label}
+                </button>
+              ) : (
+                <span className={isLast ? "text-gray-500" : ""}>{item.label}</span>
+              )}
 
-        {/* Optional current page */}
-        {currentPage && (
-          <>
-            <li>&gt;</li>
-            <li className="text-gray-500">{currentPage}</li>
-          </>
-        )}
-      </ul>
+              {!isLast && <span className="select-none">&gt;</span>}
+            </li>
+          );
+        })}
+      </ol>
     </nav>
   );
 };

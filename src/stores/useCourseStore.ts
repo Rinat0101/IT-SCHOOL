@@ -64,7 +64,6 @@ export const useCourseStore = create<CourseStore>((set) => ({
     }
   },
 
-  // 📦 Fetch full module structure and set selectedModule
   fetchModuleStructure: async (module) => {
     console.log("🟣 fetchModuleStructure called with:", module);
     if (!module?.id) {

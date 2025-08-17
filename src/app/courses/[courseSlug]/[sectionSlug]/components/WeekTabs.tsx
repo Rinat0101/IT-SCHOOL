@@ -16,7 +16,7 @@ const WeekTabs: React.FC<WeekTabsProps> = ({
   if (!weeks?.length) return null;
 
   return (
-    <div className="flex justify-end gap-3 mb-6 overflow-x-auto">
+    <div className="flex justify-end gap-3 overflow-x-auto">
       {weeks.map((week) => (
         <button
           key={week.id}

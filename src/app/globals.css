@@ -1,6 +1,20 @@
 @import "tailwindcss";
 
 /* Define Public Sans font */
+#nprogress, #nprogress .bar,
+#__next-build-watcher,
+nextjs-portal,
+#__next-prerender-indicator,
+#__next_route-announcer__ { display: none !important; }
+
+html, body, #__next {
+  height: 100%;
+}
+body {
+  margin: 0 !important;      
+  background: transparent;    
+}
+
 @font-face {
   font-family: "Public Sans";
   src: url("/fonts/PublicSans/static/PublicSans-Regular.ttf") format("truetype");

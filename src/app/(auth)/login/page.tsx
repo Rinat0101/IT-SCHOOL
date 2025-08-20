@@ -28,56 +28,40 @@ export default function LoginPage() {
 
   return (
     <div className="bg-white min-h-screen">
-      <Navbar />
-
       <main className="flex items-center justify-center">
         {/* Desktop Form */}
         <div className="hidden lg:flex flex-col items-center justify-center bg-white rounded-2xl dialog-shadow min-h-[32rem] h-full max-w-[24rem] w-full p-6 gap-6 pt-2">
           {/* Logo + Heading */}
           <div className="flex flex-col items-center">
-            <img
-              src="/images/logo.png"
-              alt="ProCoding Logo"
-              className="w-[14.75rem] h-auto"
-            />
-            <h2 className="text-2xl font-semibold text-center text-[#000000]">
-              Log In
-            </h2>
+            <img src="/images/logo.png" alt="ProCoding Logo" className="w-[14.75rem] h-auto" />
+            <h2 className="text-2xl font-semibold text-center text-[#000000]">Log In</h2>
           </div>
 
           {/* Error message */}
-          {error && (
-            <p className="text-red-500 text-sm text-center">{error}</p>
-          )}
+          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
           {/* Form */}
-          <form
-            onSubmit={handleSubmit}
-            className="flex flex-col gap-6 w-full items-center"
-          >
+          <form onSubmit={handleSubmit} className="flex flex-col gap-6 w-full items-center">
             {/* Email */}
             <div className="relative w-full h-12">
               <input
                 type="email"
                 id="email"
                 required
-                placeholder=" "
+                placeholder=" " // keep a single space for :placeholder-shown
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="peer absolute top-0 left-0 w-full h-full border border-[#919EAB52] rounded-lg px-4 pt-6 text-[#000000] bg-transparent focus:outline-none focus:border-[#3880E8]"
+                className="peer absolute inset-0 w-full h-full rounded-lg border border-[#919EAB52]
+               bg-transparent px-4 py-3 text-[#000000] outline-none
+               focus:border-[#3880E8] transition-colors"
               />
               <label
                 htmlFor="email"
-                className="absolute left-4 top-[0.8rem] font-normal text-gray-1 text-sm bg-white px-1 transition-all
-                peer-placeholder-shown:top-[0.8rem]
-                peer-placeholder-shown:text-sm
-                peer-placeholder-shown:left-4
-                peer-focus:top-[-0.5rem]
-                peer-focus:text-[0.8rem]
-                peer-focus:left-[0.8rem]
-                peer-not-placeholder-shown:top-[-0.5rem]
-                peer-not-placeholder-shown:text-[0.8rem]
-                peer-not-placeholder-shown:left-[0.8rem]"
+                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2
+               bg-white px-1 text-sm text-gray-500 transition-all
+               peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-[12px] peer-focus:text-[#3880E8]
+               peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:-translate-y-1/2
+               peer-[:not(:placeholder-shown)]:text-[12px]"
               >
                 Email
               </label>
@@ -92,20 +76,17 @@ export default function LoginPage() {
                 placeholder=" "
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="peer absolute top-0 left-0 w-full h-full border border-[#919EAB52] rounded-lg px-4 pt-6 text-[#000000] bg-transparent focus:outline-none focus:border-[#3880E8]"
+                className="peer absolute inset-0 w-full h-full rounded-lg border border-[#919EAB52]
+               bg-transparent px-4 py-3 text-[#000000] outline-none
+               focus:border-[#3880E8] transition-colors"
               />
               <label
                 htmlFor="password"
-                className="absolute left-4 top-[0.8rem] text-gray-1 text-sm bg-white px-1 transition-all
-                peer-placeholder-shown:top-[0.8rem]
-                peer-placeholder-shown:text-sm
-                peer-placeholder-shown:left-4
-                peer-focus:top-[-0.5rem]
-                peer-focus:text-[0.8rem]
-                peer-focus:left-[0.8rem]
-                peer-not-placeholder-shown:top-[-0.5rem]
-                peer-not-placeholder-shown:text-[0.8rem]
-                peer-not-placeholder-shown:left-[0.8rem]"
+                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2
+               bg-white px-1 text-sm text-gray-500 transition-all
+               peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-[12px] peer-focus:text-[#3880E8]
+               peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:-translate-y-1/2
+               peer-[:not(:placeholder-shown)]:text-[12px]"
               >
                 Password
               </label>

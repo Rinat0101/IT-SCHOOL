@@ -1,7 +1,8 @@
+// components/LessonNavButtons.tsx
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import type { Lesson } from "@/types";
 
 interface LessonNavButtonsProps {
@@ -9,53 +10,91 @@ interface LessonNavButtonsProps {
   lessons: Pick<Lesson, "slug" | "title">[];
 }
 
-export default function LessonNavButtons({ currentLesson, lessons }: LessonNavButtonsProps) {
-  const { courseSlug, sectionSlug, moduleSlug, weekSlug, daySlug } = useParams() as Record<
-    string,
-    string
-  >;
+export default function LessonNavButtons({
+  currentLesson,
+  lessons,
+}: LessonNavButtonsProps) {
+  const pathname = usePathname() || "";
 
-  const currentIndex = lessons.findIndex((lesson) => lesson.slug === currentLesson.slug);
+  const {
+    courseSlug = "",
+    sectionSlug = "",
+    moduleSlug = "",
+    weekSlug = "",
+    daySlug = "",
+  } = (useParams() as Record<string, string>) ?? {};
 
-  const prevLesson = currentIndex > 0 ? lessons[currentIndex - 1] : null;
-  const nextLesson = currentIndex < lessons.length - 1 ? lessons[currentIndex + 1] : null;
+  // Find current lesson index; if not found (idx === -1), try URL last segment
+  let idx = lessons.findIndex((l) => l.slug === currentLesson.slug);
+  if (idx === -1 && pathname) {
+    const lastSeg = pathname.split("#")[0].split("?")[0].replace(/\/+$/, "").split("/").pop() || "";
+    idx = lessons.findIndex((l) => l.slug === lastSeg);
+  }
+
+  const prev = idx > 0 ? lessons[idx - 1] : null;
+  const next = idx >= 0 && idx < lessons.length - 1 ? lessons[idx + 1] : null;
+
+  const pathFor = (slug: string) =>
+    `/courses/${courseSlug}/${sectionSlug}/${moduleSlug}/${weekSlug}/${daySlug}/${slug}`;
+
+  const btnBase =
+    "inline-flex items-center justify-center gap-2 h-[40px] min-w-[140px] px-4 rounded-lg border text-sm font-bold transition";
+  const btnPurple =
+    "border-[#D58AD7] text-[#B923AE] hover:bg-[#B923AE]/5 focus:outline-none focus:ring-2 focus:ring-[#B923AE]/30";
+  const btnDisabled =
+    "border-gray-200 text-gray-300 cursor-not-allowed pointer-events-none";
 
   return (
-    <div className="mt-10 flex justify-between items-center gap-6">
-      {/* Back Button */}
-      {prevLesson ? (
-        <Link
-          href={`/courses/${courseSlug}/${sectionSlug}/${moduleSlug}/${weekSlug}/${daySlug}/${prevLesson.slug}`}
-          className="border border-pink-500 text-pink-600 font-semibold px-4 py-2 rounded-md flex items-center gap-2 hover:bg-pink-50 transition"
-        >
-          ← Back
-        </Link>
-      ) : (
-        <span className="border border-gray-300 text-gray-400 font-semibold px-4 py-2 rounded-md flex items-center gap-2 cursor-not-allowed">
-          ← Back
-        </span>
-      )}
+    <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-8 items-start">
+      {/* Back */}
+      <div className="text-center sm:text-right">
+        {prev ? (
+          <Link
+            href={pathFor(prev.slug)}
+            prefetch={false}
+            rel="prev"
+            className={`${btnBase} ${btnPurple}`}
+            aria-label="Go to previous lesson"
+          >
+            <span aria-hidden>←</span>
+            Back
+          </Link>
+        ) : (
+          <span className={`${btnBase} ${btnDisabled}`} aria-disabled="true">
+            <span aria-hidden>←</span>
+            Back
+          </span>
+        )}
 
-      {/* Titles */}
-      <div className="flex-1 text-center text-gray-800 text-lg font-medium">
-        <div>{prevLesson?.title || ""}</div>
-        <div className="text-sm text-gray-400">|</div>
-        <div>{nextLesson?.title || ""}</div>
+        <div className="mt-3 text-[14px] leading-[22px] font-normal text-[#1B2633]">
+          {prev?.title ?? ""}
+        </div>
       </div>
 
-      {/* Next Button */}
-      {nextLesson ? (
-        <Link
-          href={`/courses/${courseSlug}/${sectionSlug}/${moduleSlug}/${weekSlug}/${daySlug}/${nextLesson.slug}`}
-          className="border border-pink-500 text-pink-600 font-semibold px-4 py-2 rounded-md flex items-center gap-2 hover:bg-pink-50 transition"
-        >
-          Next →
-        </Link>
-      ) : (
-        <span className="border border-gray-300 text-gray-400 font-semibold px-4 py-2 rounded-md flex items-center gap-2 cursor-not-allowed">
-          Next →
-        </span>
-      )}
+      {/* Next */}
+      <div className="text-center sm:text-left">
+        {next ? (
+          <Link
+            href={pathFor(next.slug)}
+            prefetch={false}
+            rel="next"
+            className={`${btnBase} ${btnPurple}`}
+            aria-label="Go to next lesson"
+          >
+            Next
+            <span aria-hidden>→</span>
+          </Link>
+        ) : (
+          <span className={`${btnBase} ${btnDisabled}`} aria-disabled="true">
+            Next
+            <span aria-hidden>→</span>
+          </span>
+        )}
+
+        <div className="mt-3 text-[14px] leading-[22px] font-normal text-[#1B2633]">
+          {next?.title ?? ""}
+        </div>
+      </div>
     </div>
   );
 }

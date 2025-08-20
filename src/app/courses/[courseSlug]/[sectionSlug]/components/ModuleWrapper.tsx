@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo } from "react";
 import { useCourseStore } from "@/stores/useCourseStore";
-import type { Week, Module } from "@/types";
+import type { Week, Module, Day, Lesson } from "@/types";
 import WeekTabs from "./WeekTabs";
 import DayView from "./DayView";
 import Link from "next/link";
+import { sortBy } from "@/app/utils/sort";
 
 const ModuleWrapper = () => {
   const selectedWeekId = useCourseStore((s) => s.selectedWeekId);
@@ -15,37 +16,46 @@ const ModuleWrapper = () => {
   const selectedModule = useCourseStore((s) => s.selectedModule);
   const setSelectedModule = useCourseStore((s) => s.setSelectedModule);
 
-  // 1) Ensure Module 1 is active by default (and set its first week)
+  // Ensure Module 1 is active by default (and set its first week)
   useEffect(() => {
     if (!selectedSection) return;
     if (!selectedModule) {
       const firstMod = selectedSection.modules?.[0];
       if (firstMod) {
         setSelectedModule(firstMod);
-        const firstWeekId = firstMod.weeks?.[0]?.id ?? null;
-        setSelectedWeekId(firstWeekId);
+        setSelectedWeekId(firstMod.weeks?.[0]?.id ?? null);
       }
     }
   }, [selectedSection, selectedModule, setSelectedModule, setSelectedWeekId]);
 
-  // 2) When module changes, ensure week selection is valid
+  // Weeks sorted by their own order
+  const weeksSorted: Week[] = useMemo(
+    () => sortBy(selectedModule?.weeks, (w) => (w as any).order), // Week has order
+    [selectedModule]
+  );
+
+  // Keep selectedWeekId valid among sorted weeks
   useEffect(() => {
     if (!selectedModule) return;
-    const weeks = selectedModule.weeks || [];
-    if (weeks.length === 0) {
+    if (weeksSorted.length === 0) {
       if (selectedWeekId !== null) setSelectedWeekId(null);
       return;
     }
-    const stillValid = weeks.some((w) => w.id === selectedWeekId);
-    if (!stillValid) {
-      setSelectedWeekId(weeks[0].id);
-    }
-  }, [selectedModule, selectedWeekId, setSelectedWeekId]);
+    const stillValid = weeksSorted.some((w) => w.id === selectedWeekId);
+    if (!stillValid) setSelectedWeekId(weeksSorted[0].id);
+  }, [selectedModule, weeksSorted, selectedWeekId, setSelectedWeekId]);
 
-  const currentWeek: Week | undefined = useMemo(() => {
-    if (!selectedModule || !selectedWeekId) return undefined;
-    return selectedModule.weeks?.find((w) => w.id === selectedWeekId);
-  }, [selectedModule, selectedWeekId]);
+  // Current week
+  const currentWeek: Week | undefined = useMemo(
+    () => weeksSorted.find((w) => w.id === selectedWeekId),
+    [weeksSorted, selectedWeekId]
+  );
+
+  // Days sorted by their own order
+  const daysSorted: Day[] = useMemo(
+    () => sortBy(currentWeek?.days, (d) => (d as any).order), // Day has order
+    [currentWeek]
+  );
 
   const courseSlug = selectedCourse?.slug;
   const sectionSlug = selectedSection?.slug;
@@ -54,9 +64,8 @@ const ModuleWrapper = () => {
 
   return (
     <div className="bg-[#F9FAFB] pt-2 rounded-b-lg shadow-md">
-      {/* Header row: back on left, tabs centered, spacer on right */}
+      {/* Header row */}
       <div className="grid grid-cols-3 items-center m-4">
-        {/* Back (left) */}
         <div className="justify-self-start">
           <Link
             href={courseSlug ? `/courses/${courseSlug}` : "#"}
@@ -66,7 +75,6 @@ const ModuleWrapper = () => {
           </Link>
         </div>
 
-        {/* Module Tabs (center) */}
         <nav className="justify-self-center">
           <div className="flex items-center h-8 gap-4 text-sm font-bold overflow-x-auto">
             {selectedSection?.modules?.map((mod: Module, idx: number) => (
@@ -74,7 +82,7 @@ const ModuleWrapper = () => {
                 <button
                   onClick={() => {
                     setSelectedModule(mod);
-                    setSelectedWeekId(mod.weeks[0]?.id ?? null);
+                    setSelectedWeekId(mod.weeks?.[0]?.id ?? null);
                   }}
                   className={`pb-[2px] transition-colors whitespace-nowrap border-b-2 ${
                     mod.id === selectedModule?.id
@@ -84,8 +92,6 @@ const ModuleWrapper = () => {
                 >
                   {mod.title}
                 </button>
-
-                {/* dot separator (no dot after last) */}
                 {idx < (selectedSection?.modules?.length ?? 0) - 1 && (
                   <span className="mx-4 text-gray-300 select-none">•</span>
                 )}
@@ -94,39 +100,43 @@ const ModuleWrapper = () => {
           </div>
         </nav>
 
-        {/* Right spacer to keep center perfect */}
         <div className="justify-self-end h-8" />
       </div>
 
-      {/* Week content (light/white) */}
+      {/* Week content */}
       <div className="rounded-xl bg-white px-6 py-4 md:px-8 shadow-sm">
-        {/* Week Tabs (grey) */}
         <div className="rounded-lg p-0">
           <WeekTabs
-            weeks={selectedModule?.weeks || []}
+            weeks={weeksSorted}
             selectedWeekId={selectedWeekId}
             onSelectWeek={(id) => setSelectedWeekId(id)}
           />
         </div>
 
         {/* Days grid */}
-        <div
-          className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-6"
-          style={{ minHeight: "calc(100vh - 260px)" }}
-        >
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-6" style={{ minHeight: "calc(100vh - 260px)" }}>
           {Array.from({ length: 3 }).map((_, idx) => {
-            const day = currentWeek?.days?.[idx];
+            const day = daysSorted[idx];
+
+            // Sort lessons by (optional) order; fallback to original index
+            const lessonsSorted: Lesson[] = (() => {
+              const list = day?.lessons ?? [];
+              return [...list]
+                .map((l, i) => ({ l, i, o: (l as any).order ?? i })) // (l as any).order if present
+                .sort((a, b) => a.o - b.o)
+                .map((x) => x.l);
+            })();
 
             return (
               <div
-                key={idx}
+                key={day?.id ?? `day-skeleton-${idx}`}
                 className="bg-gray-50 rounded-lg p-4 h-full flex flex-col border border-gray-200"
               >
                 {day && courseSlug && sectionSlug && moduleSlug && weekSlug ? (
                   <DayView
                     className="flex-1"
                     dayTitle={day.title}
-                    lessons={day.lessons}
+                    lessons={lessonsSorted}
                     courseSlug={courseSlug}
                     sectionSlug={sectionSlug}
                     moduleSlug={moduleSlug}

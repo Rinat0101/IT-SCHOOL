@@ -1,3 +1,6 @@
+// components/blocks/TextBlock.tsx
+import Markdown from "../MarkdownRenderer";
+
 interface TextBlockProps {
   id?: string;
   title?: string | null;
@@ -9,30 +12,20 @@ export default function TextBlock({ id, title, content, subsections }: TextBlock
   return (
     <div className="mb-6">
       {title && (
-        <h2
-          id={`sec-${id}`}
-          className="text-xl font-semibold text-[#202733] mb-2" 
-        >
+        <h2 id={`sec-${id}`} className="text-xl font-semibold text-[#202733] mb-2">
           {title}
         </h2>
       )}
 
-      <p className="text-[#212B36] text-base leading-6 whitespace-pre-line">
-        {content}
-      </p>
+      <Markdown content={content} />
 
       {Array.isArray(subsections) && subsections.length > 0 && (
         <div className="mt-4 space-y-2">
           {subsections.map((sub) => {
-            const label =
-              (sub.title && sub.title.trim()) || (sub.text && sub.text.trim());
+            const label = (sub.title?.trim() || sub.text?.trim());
             if (!label) return null;
             return (
-              <h3
-                key={sub.id}
-                id={`sub-${sub.id}`}
-                className="text-[15px] font-medium text-[#454F5B]" 
-              >
+              <h3 key={sub.id} id={`sub-${sub.id}`} className="text-[15px] font-medium text-[#454F5B]">
                 {label}
               </h3>
             );

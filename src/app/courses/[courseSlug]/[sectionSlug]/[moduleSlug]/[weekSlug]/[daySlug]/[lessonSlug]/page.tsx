@@ -13,29 +13,43 @@ type RouteParams = {
 };
 
 export default async function Page({ params }: { params: RouteParams }) {
-  const { courseSlug, sectionSlug, moduleSlug, weekSlug, daySlug, lessonSlug } = params;
+  const {
+    courseSlug: urlCourseSlug,
+    sectionSlug: urlSectionSlug,
+    moduleSlug,
+    weekSlug,
+    daySlug,
+    lessonSlug,
+  } = params;
 
+  // 1) Fetch everything for this lesson in one go
   const data = await getLessonBySlug(lessonSlug);
-  if (!data?.lesson) return notFound();
+  if (!data?.lesson || !data.day) return notFound();
 
-  const { lesson, day, courseId } = data;
+  const { lesson, day } = data;
 
-  const finalCourseSlug = data.courseSlug ?? courseSlug;
-  const finalCourseTitle = data.courseTitle ?? courseSlug.replace(/-/g, " ");
-  const finalSectionSlug = data.sectionSlug ?? sectionSlug;
-  const finalSectionTitle = data.sectionTitle ?? sectionSlug.replace(/-/g, " ");
+  // 2) Ensure we have course/section labels and slugs
+  const finalCourseSlug  = data.courseSlug  ?? urlCourseSlug;
+  const finalCourseTitle = data.courseTitle ?? urlCourseSlug.replace(/-/g, " ");
+  const finalSectionSlug = data.sectionSlug ?? urlSectionSlug;
+  const finalSectionTitle= data.sectionTitle?? urlSectionSlug.replace(/-/g, " ");
 
-  if (!day || !courseId) return notFound();
+  // 3) Build baseHref for the DaySidebar links (no trailing slash)
+  const baseHref = `/courses/${finalCourseSlug}/${finalSectionSlug}/${moduleSlug}/${weekSlug}/${daySlug}`;
 
+  // 4) Pass everything to the client page
   return (
     <LessonPage
-      lesson={lesson}
-      day={day}
-      courseId={courseId}
+      lesson={lesson}             // full content for LessonBlockRenderer
+      day={day}                   // all lessons for current day (for DaySidebar + NavButtons)
+      courseId={data.courseId ?? ""}
+
       courseSlug={finalCourseSlug}
       courseTitle={finalCourseTitle}
       sectionSlug={finalSectionSlug}
       sectionTitle={finalSectionTitle}
+
+      baseHref={baseHref}
     />
   );
 }

@@ -9,7 +9,6 @@ interface CourseSectionCardProps {
 const CourseSectionCard: React.FC<CourseSectionCardProps> = ({
   title,
   completionPercentage,
-  iconUrl,
 }) => {
   const radius = 45;
   const strokeWidth = 6;
@@ -60,11 +59,8 @@ const CourseSectionCard: React.FC<CourseSectionCardProps> = ({
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-2 mt-2">
+      <div className="flex justify-between gap-2 mt-2">
         <h3 className="text-base font-bold text-gray-900">{title}</h3>
-        {iconUrl && (
-          <img src={iconUrl} alt="Icon" className="w-5 h-5 opacity-40" />
-        )}
       </div>
     </div>
   );

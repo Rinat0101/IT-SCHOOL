@@ -1,28 +1,35 @@
+// components/ExtraResources.tsx
 import { ExtraResourceBlock } from "@/types";
 
 type Props = {
-  resources: ExtraResourceBlock[];
+  resources: ExtraResourceBlock[] | undefined;
 };
 
 export default function ExtraResources({ resources }: Props) {
-  if (!resources?.length) return null;
+  if (!resources || resources.length === 0) return null;
 
   return (
-    <section className="mt-12">
-      <h2 className="text-2xl font-semibold text-gray-900 mb-6">Extra Resources</h2>
+    <section id="extra-resources" className="mt-10">
+      <h2 className="text-xl font-semibold text-[#212B36] mb-4">Extra Resources</h2>
 
-      <div className="space-y-4">
-        {resources.map((res, idx) => (
-          <a
-            key={idx}
-            href={res.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block rounded-xl shadow-sm bg-white hover:shadow-md transition p-5 border border-gray-100"
-          >
-            <p className="text-lg text-gray-800 font-medium">{res.title}</p>
-          </a>
-        ))}
+      <div className="rounded-2xl shadow-md bg-white overflow-hidden">
+        <ul className="divide-y divide-gray-100">
+          {resources.map((res, i) => {
+            const href = res.url || "#";
+            return (
+              <li key={`extra-${i}`}>
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block px-6 py-4 text-[16px] leading-6 text-[#212B36] font-semibold hover:text-[#00AB55]"
+                >
+                  {res.title}
+                </a>
+              </li>
+            );
+          })}
+        </ul>
       </div>
     </section>
   );

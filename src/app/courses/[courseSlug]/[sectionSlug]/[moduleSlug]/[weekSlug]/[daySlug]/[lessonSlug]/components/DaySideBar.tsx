@@ -12,9 +12,18 @@ type Props = {
     isMandatory: boolean;
     order?: number | null;
   }[];
+  /** /courses/{course}/{section}/{module}/{week}/{day} (NO trailing slash) */
+  baseHref: string;
+
+  /** Active lesson slug (from the currently opened lesson) */
   currentLessonSlug: string;
+
+  /** Sidebar header */
   currentDayTitle: string;
+
+  /** Back arrow destination (section page) */
   sectionHref: string;
+
   className?: string;
 };
 
@@ -28,17 +37,36 @@ const TYPE_BADGE: Record<Lesson["lessonType"], string> = {
 
 export default function DaySidebar({
   lessons,
+  baseHref,
   currentLessonSlug,
   currentDayTitle,
   sectionHref,
   className = "",
 }: Props) {
+  // Normalize base href once (no trailing slash, no double slashes)
+  const cleanBase = baseHref.replace(/\/+$/, "").replace(/\/{2,}/g, "/");
+
+  // Sort defensively by 'order' so sidebar + nav are consistent
+  const sorted = [...lessons].sort(
+    (a, b) => (a.order ?? 0) - (b.order ?? 0)
+  );
+
+  // If the active slug isn’t part of the provided day’s lessons,
+  // don’t highlight anything (prevents “wrong day” highlight).
+  const activeExists = sorted.some((l) => l.slug === currentLessonSlug);
+
   return (
     <aside className={`w-full ${className}`}>
       {/* Header with back button + day title */}
       <div className="flex items-center gap-2 mb-6">
         <div className="flex items-center gap-2">
-          <Link href={sectionHref} className="text-gray-600 hover:text-black flex items-center">
+          <Link
+            href={sectionHref}
+            className="text-gray-600 hover:text-black flex items-center"
+            aria-label="Back to section"
+            title="Back to section"
+          >
+            {/* ← chevron */}
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-5 w-5"
@@ -53,23 +81,24 @@ export default function DaySidebar({
             </svg>
           </Link>
 
-          <h2 className="text-sm font-semibold uppercase text-[#212B36]">{currentDayTitle}</h2>
+          <h2 className="text-sm font-semibold uppercase text-[#212B36]">
+            {currentDayTitle}
+          </h2>
         </div>
       </div>
 
       <ul className="relative">
-        {lessons.map((l, idx) => {
-          const isActive = l.slug === currentLessonSlug;
+        {sorted.map((l, idx) => {
+          const href = `${cleanBase}/${encodeURIComponent(l.slug)}`;
+          const isActive = activeExists && currentLessonSlug === l.slug;
+
           return (
-            <li key={l.id} className="relative pl-16 pb-10">
+            <li key={l.id} className="relative pl-16 pb-5">
               {/* vertical rail */}
-              {idx < lessons.length - 1 && (
+              {idx < sorted.length - 1 && (
                 <div
                   className="absolute left-4 w-px bg-gray-300"
-                  style={{
-                    top: "1.25rem",
-                    bottom: "-1.25rem",
-                  }}
+                  style={{ top: "1.25rem", bottom: "-1.25rem" }}
                 />
               )}
 
@@ -79,6 +108,7 @@ export default function DaySidebar({
                            w-4 h-4 rounded-full border-2 bg-white
                            flex items-center justify-center"
                 style={{ borderColor: isActive ? "#00AB55" : "#C1C7D0" }}
+                aria-hidden
               >
                 <span
                   className="w-2 h-2 rounded-full"
@@ -97,8 +127,12 @@ export default function DaySidebar({
                   {TYPE_BADGE[l.lessonType]}
                 </span>
 
-                <h4 className="mt-1 text-sm font-medium text-[#212B36]">
-                  <Link href={l.slug} className="hover:underline">
+                <h4 className="mt-1 text-sm font-bold text-[#212B36]">
+                  <Link
+                    href={href}
+                    className="hover:underline"
+                    {...(isActive ? { "aria-current": "page" } : {})}
+                  >
                     {l.title}
                   </Link>
                 </h4>

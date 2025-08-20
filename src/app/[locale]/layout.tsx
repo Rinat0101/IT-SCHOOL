@@ -1,21 +1,25 @@
-import { notFound } from 'next/navigation';
+import { notFound } from "next/navigation";
+import NavBar from "@/app/navbar";
 
 export default function LocaleLayout({
   children,
-  params
+  params,
 }: {
   children: React.ReactNode;
   params: { locale: string };
 }) {
   const { locale } = params;
 
-  if (!['en', 'ru'].includes(locale)) {
+  if (!["en", "ru"].includes(locale)) {
     notFound();
   }
 
   return (
     <html lang={locale}>
-      <body>{children}</body>
+      <body>
+        <NavBar />
+        <main>{children}</main>
+      </body>
     </html>
   );
 }

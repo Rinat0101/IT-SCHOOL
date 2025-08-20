@@ -1,4 +1,3 @@
-// components/LessonBlockRenderer.tsx
 import React from "react";
 import TextBlock from "./blocks/TextBlock";
 import ImageBlock from "./blocks/ImageBlock";
@@ -12,69 +11,72 @@ interface LessonBlockRendererProps {
 }
 
 export default function LessonBlockRenderer({ blocks }: LessonBlockRendererProps) {
-  if (!blocks?.length) return null;
+  if (!Array.isArray(blocks) || blocks.length === 0) return null;
 
   return (
     <div className="flex flex-col gap-6">
-      {blocks.map((block: any) => {
-        const wrapperId = block?.id ? `sec-${block.id}` : undefined;
+      {blocks.map((block: any, i: number) => {
+        const baseId = typeof block?.id === "string" ? block.id : `blk-${i}`;
+        const sectionId = `sec-${baseId}`;
+
+        const wrap = (node: React.ReactNode, labelledById?: string) => (
+          <section
+            id={sectionId}
+            key={sectionId}
+            className="scroll-mt-[88px]" 
+            aria-labelledby={labelledById}
+          >
+            {node}
+          </section>
+        );
 
         switch (block.__typename) {
           case "TextBlockRecord":
-          case "TextBlock":
-            return (
-              <section id={wrapperId} key={block.id}>
-                <TextBlock
-                  id={block.id}                          
-                  title={block.title}
-                  content={block.content}
-                  subsections={block.subsections}
-                />
-              </section>
+          case "TextBlock": {
+            const titleId = block?.title ? `title-${baseId}` : undefined;
+            return wrap(
+              <TextBlock
+                id={baseId}
+                title={block.title}
+                content={block.content}
+                subsections={block.subsections}
+              />,
+              titleId
             );
+          }
 
           case "ImageBlockRecord":
           case "ImageBlock": {
             const url = block?.imageContent?.url || block?.image_content?.url;
             if (!url) return null;
-            return (
-              <section id={wrapperId} key={block.id}>
-                <ImageBlock title={block.title} imageUrl={url} alt={block.title || "Lesson image"} />
-              </section>
+            return wrap(
+              <ImageBlock title={block.title} imageUrl={url} alt={block.title || "Lesson image"} />
             );
           }
 
           case "VideoBlockRecord":
           case "VideoBlock": {
-            const v = block.videoUrl ?? block.video_url;
+            const v = block?.videoUrl ?? block?.video_url;
             const url = typeof v === "string" ? v : v?.url;
             if (!url) return null;
-            return (
-              <section id={wrapperId} key={block.id}>
-                <VideoBlock title={block.title} videoUrl={url} />
-              </section>
-            );
+            return wrap(<VideoBlock title={block.title} videoUrl={url} />);
           }
 
           case "AlertBlockRecord":
-          case "AlertBlock":
-            return (
-              <section id={wrapperId} key={block.id}>
-                <AlertBlock
-                  text={block.text}
-                  background_color={block.backgroundColor ?? block.background_color}
-                  text_color={block.textColor ?? block.text_color}
-                />
-              </section>
+          case "AlertBlock": {
+            return wrap(
+              <AlertBlock
+                text={block.text}
+                background_color={block.backgroundColor ?? block.background_color}
+                text_color={block.textColor ?? block.text_color}
+              />
             );
+          }
 
           case "PresentationBlockRecord":
-          case "PresentationBlock":
-            return (
-              <section id={wrapperId} key={block.id}>
-                <PresentationBlock title={block.title} code={block.code} />
-              </section>
-            );
+          case "PresentationBlock": {
+            return wrap(<PresentationBlock title={block.title} code={block.code} />);
+          }
 
           default:
             return null;

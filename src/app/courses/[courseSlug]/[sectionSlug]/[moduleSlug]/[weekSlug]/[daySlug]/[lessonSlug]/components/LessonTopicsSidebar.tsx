@@ -1,10 +1,14 @@
 // components/LessonTopicsSidebar.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import type { DatoCmsLessonBlock } from "@/types";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { DatoCmsLessonBlock, ExtraResourceBlock } from "@/types";
 
-type Props = { blocks?: DatoCmsLessonBlock[]; className?: string };
+type Props = {
+  blocks?: DatoCmsLessonBlock[];
+  className?: string;
+  extraResources?: ExtraResourceBlock[];
+};
 
 type SidebarSection = {
   id: string;
@@ -13,11 +17,22 @@ type SidebarSection = {
   subsections: { id: string; label: string; targetId?: string }[];
 };
 
-export default function LessonTopicsSidebar({ blocks, className = "" }: Props) {
+export default function LessonTopicsSidebar({
+  blocks,
+  className = "",
+  extraResources = [],
+}: Props) {
+  const hasExtra = Array.isArray(extraResources) && extraResources.length > 0;
+  const EXTRA_ID = "extra-resources";
+  const HEADER_OFFSET = 80;         // fixed header height
+  const PIVOT_OFFSET = 120;         // distance below header to judge “current”
+
+  // ---------- build sections (plus Extra Resources at end) ----------
   const sections = useMemo<SidebarSection[]>(() => {
     if (!Array.isArray(blocks)) return [];
-    return (
-      blocks
+
+    const base =
+      (blocks
         .map((b: any) => {
           const isText =
             b?.__typename === "TextBlockRecord" || b?.__typename === "TextBlock";
@@ -53,59 +68,125 @@ export default function LessonTopicsSidebar({ blocks, className = "" }: Props) {
             subsections,
           };
         })
-        .filter(Boolean) as SidebarSection[]
-    );
-  }, [blocks]);
+        .filter(Boolean) as SidebarSection[]) || [];
 
-  const [openId, setOpenId] = useState<string | null>(() => {
-    const first = sections.find((s) => s.subsections.length > 0);
-    return first?.id ?? null;
-  });
+    if (hasExtra) {
+      base.push({
+        id: "extra_resources_sidebar",
+        title: "Extra Resources",
+        targetId: EXTRA_ID,
+        subsections: [],
+      });
+    }
+
+    return base;
+  }, [blocks, hasExtra]);
+
+  // ---------- state (active == open so only one section is expanded) ----------
   const [activeId, setActiveId] = useState<string | null>(sections[0]?.id ?? null);
+  const [openId, setOpenId] = useState<string | null>(sections[0]?.id ?? null);
 
+  // ---------- programmatic scroll suppression ----------
+  const suppressUntil = useRef<number>(0);
+  const suppressFor = (ms: number) => {
+    suppressUntil.current = Date.now() + ms;
+  };
+
+  // ---------- cache target elements ----------
+  const targetsRef = useRef<(HTMLElement | null)[]>([]);
   useEffect(() => {
-    if (sections.length === 0) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        const visibleTop = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-        if (!visibleTop) return;
-        const tid = visibleTop.target.getAttribute("id");
-        const sec = sections.find((s) => s.targetId === tid);
-        if (sec) {
-          setActiveId(sec.id);
-          if (sec.subsections.length) setOpenId(sec.id);
-        }
-      },
-      { root: null, rootMargin: "0px 0px -60% 0px", threshold: [0.1, 0.25, 0.5] }
+    targetsRef.current = sections.map((s) =>
+      s.targetId ? (document.getElementById(s.targetId) as HTMLElement | null) : null
     );
-
-    const targets = sections
-      .map((s) => s.targetId)
-      .filter(Boolean)
-      .map((id) => document.getElementById(id!))
-      .filter(Boolean) as Element[];
-    targets.forEach((el) => io.observe(el));
-    return () => io.disconnect();
   }, [sections]);
 
+  // ---------- scroll spy with requestAnimationFrame (no jitter) ----------
+  useEffect(() => {
+    if (!sections.length) return;
+
+    let ticking = false;
+
+    const pickActive = () => {
+      ticking = false;
+
+      // ignore while programmatic smooth scroll animates
+      if (Date.now() < suppressUntil.current) return;
+
+      const pivot = window.scrollY + HEADER_OFFSET + PIVOT_OFFSET;
+
+      // near bottom → stick to “Extra Resources” if present
+      if (hasExtra) {
+        const nearBottom =
+          window.innerHeight + window.scrollY >=
+          document.documentElement.scrollHeight - 2;
+        if (nearBottom) {
+          const last = sections[sections.length - 1];
+          if (last?.targetId === EXTRA_ID && activeId !== last.id) {
+            setActiveId(last.id);
+            setOpenId(last.id);
+          }
+          return;
+        }
+      }
+
+      // find the last section whose top is above the pivot
+      let candidateIndex = 0;
+      for (let i = 0; i < sections.length; i++) {
+        const el = targetsRef.current[i];
+        if (!el) continue;
+        const top = el.offsetTop; // relative to document
+        if (top <= pivot) candidateIndex = i;
+        else break;
+      }
+
+      const candidate = sections[candidateIndex];
+      if (candidate && candidate.id !== activeId) {
+        setActiveId(candidate.id);
+        setOpenId(candidate.id); // keep only active expanded
+      }
+    };
+
+    const onScrollOrResize = () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(pickActive);
+      }
+    };
+
+    window.addEventListener("scroll", onScrollOrResize, { passive: true });
+    window.addEventListener("resize", onScrollOrResize);
+    // initial pick
+    onScrollOrResize();
+
+    return () => {
+      window.removeEventListener("scroll", onScrollOrResize);
+      window.removeEventListener("resize", onScrollOrResize);
+    };
+  }, [sections, activeId, hasExtra]);
+
+  // ---------- clicking a topic → smooth scroll + suppression ----------
   const scrollToId = (id?: string) => {
     if (!id) return;
     const el = document.getElementById(id);
     if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    const targetY = el.getBoundingClientRect().top + window.scrollY - HEADER_OFFSET - 4;
+    const distance = Math.abs(window.scrollY - targetY);
+    const duration = Math.min(900, Math.max(350, distance * 0.6));
+    suppressFor(duration + 150);
+
+    window.scrollTo({ top: targetY, behavior: "smooth" });
   };
 
   if (sections.length === 0) return null;
 
   return (
     <aside className={`w-full max-w-xs ${className}`}>
-      <h2 className="text-sm font-semibold tracking-[0.06em] text-[#202733] mb-4 uppercase">
+      <h2 className="text-xs font-semibold tracking-[0.06em] text-[#202733] mb-3 uppercase">
         Lesson topics
       </h2>
 
-      <nav className="space-y-2">
+      <nav className="space-y-1">
         {sections.map((sec) => {
           const isActive = activeId === sec.id;
           const isOpen = openId === sec.id;
@@ -113,30 +194,32 @@ export default function LessonTopicsSidebar({ blocks, className = "" }: Props) {
 
           return (
             <div key={sec.id} className="relative">
-              {/* green left accent for active */}
+              {/* active accent */}
               <span
                 className={`absolute left-0 top-0 h-full w-[3px] rounded-full transition-opacity ${
                   isActive ? "bg-[#00AB55] opacity-100" : "opacity-0"
                 }`}
                 aria-hidden
               />
+
               <div className="pl-4 pr-2">
                 <div className="flex items-center">
-                  {/* Title: scroll to section + mark active */}
                   <button
                     type="button"
                     onClick={() => {
                       setActiveId(sec.id);
+                      setOpenId(sec.id);
                       scrollToId(sec.targetId);
                     }}
-                    className={`flex-1 text-left py-3 rounded-md transition text-lg leading-6 ${
-                      isActive ? "text-[#00AB55]" : "text-[#6B778C] hover:text-[#202733]"
+                    className={`flex-1 text-left py-2 rounded-md transition leading-6 text-[15px] ${
+                      isActive
+                        ? "text-[#00AB55] font-semibold"
+                        : "text-[#6B778C] hover:text-[#202733] font-medium"
                     }`}
                   >
                     {sec.title}
                   </button>
 
-                  {/* Chevron: only expand/collapse (no scroll) */}
                   {hasSubs ? (
                     <button
                       type="button"
@@ -144,37 +227,37 @@ export default function LessonTopicsSidebar({ blocks, className = "" }: Props) {
                       aria-expanded={isOpen}
                       onClick={(e) => {
                         e.stopPropagation();
-                        setOpenId((p) => (p === sec.id ? null : sec.id));
+                        const next = isOpen ? null : sec.id;
+                        setOpenId(next);
+                        if (next) setActiveId(sec.id); // keep states aligned
                       }}
-                      className="ml-2 px-2 py-2 rounded-md text-[#6B778C] hover:bg-gray-100"
+                      className="ml-1 p-2 rounded-md text-[#6B778C] hover:bg-gray-100"
                     >
+                      {/* chevron drawn with borders to match mockup */}
                       <span
-                        className={`inline-block transition-transform ${
-                          isOpen ? "rotate-180" : ""
+                        className={`inline-block border-t-[2px] border-l-[2px] border-current w-2.5 h-2.5 transform transition-transform origin-center ${
+                          isOpen
+                            ? "rotate-45 translate-y-[1px]"
+                            : "-rotate-135 -translate-y-[1px]"
                         }`}
                         aria-hidden
-                      >
-                        ▾
-                      </span>
+                      />
                     </button>
                   ) : (
-                    <span className="ml-2 px-2 py-2 text-transparent select-none">•</span>
+                    <span className="ml-2 p-2 text-transparent select-none">•</span>
                   )}
                 </div>
               </div>
 
+              {/* subsections (display only) */}
               {isOpen && hasSubs && (
-                <ul className="mt-2 pl-8 space-y-3">
+                <ul className="mt-1 pl-7 space-y-2">
                   {sec.subsections.map((sub) => (
-                    <li key={sub.id} className="flex items-start gap-3">
-                      <span className="mt-2 h-2 w-2 rounded-full bg-[#7A869A]" />
-                      <button
-                        type="button"
-                        onClick={() => scrollToId(sub.targetId)}
-                        className="text-left text-base leading-6 text-[#6B778C] hover:text-[#202733]"
-                      >
+                    <li key={sub.id} className="flex items-start gap-2">
+                      <span className="mt-2 h-1.5 w-1.5 rounded-full bg-[#7A869A]" />
+                      <span className="text-[13px] leading-5 text-[#6B778C]">
                         {sub.label}
-                      </button>
+                      </span>
                     </li>
                   ))}
                 </ul>

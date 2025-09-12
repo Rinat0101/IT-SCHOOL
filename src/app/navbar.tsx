@@ -17,7 +17,7 @@ export default function Navbar() {
     <header className="w-full bg-white mb-6">
       <div className="mx-auto max-w-[1200px] px-6 md:px-8 py-4 flex items-center">
         <div className="shrink-0">
-          <Link href="/" aria-label="Home" className="flex items-center gap-2">
+          <Link href="/dashboard" aria-label="Home" className="flex items-center gap-2">
             <Image src="/images/logo.svg" alt="Logo" width={62} height={44} priority />
           </Link>
         </div>

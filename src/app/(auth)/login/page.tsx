@@ -22,7 +22,7 @@ export default function LoginPage() {
     if (result?.error) {
       setError("Invalid credentials");
     } else {
-      router.push("/dashboard");
+      router.push("/courses");
     }
   };
 

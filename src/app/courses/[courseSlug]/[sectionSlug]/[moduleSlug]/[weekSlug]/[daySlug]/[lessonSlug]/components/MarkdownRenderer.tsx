@@ -6,27 +6,48 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-// pick a style you like:
 import { duotoneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
 
 type Props = {
   content: string;
-  className?: string; // optional wrapper class
+  className?: string;
 };
 
-/**
- * MarkdownRenderer
- * - Handles headings, paragraphs, lists, quotes, links, images, tables
- * - Pretty fenced code blocks with Prism
- * - Safe-ish HTML via rehype-raw (only include if you trust the source)
- */
+// Parses alt like: "My caption | align:right w:300 h:180"
+function parseAltWithOptions(rawAlt?: string) {
+  const alt = (rawAlt ?? "").trim();
+  if (!alt) return { caption: "", align: "", width: undefined as number | undefined, height: undefined as number | undefined };
+
+  const [maybeCaption, maybeOpts] = alt.split("|").map((s) => s.trim());
+
+  let caption = maybeCaption || "";
+  let align = "";
+  let width: number | undefined;
+  let height: number | undefined;
+
+  if (maybeOpts) {
+    // options are space-separated: align:right w:300 h:200
+    const parts = maybeOpts.split(/\s+/);
+    for (const p of parts) {
+      if (/^align:(left|right|center)$/i.test(p)) {
+        align = p.split(":")[1].toLowerCase();
+      } else if (/^w:\d+$/i.test(p)) {
+        width = parseInt(p.split(":")[1], 10);
+      } else if (/^h:\d+$/i.test(p)) {
+        height = parseInt(p.split(":")[1], 10);
+      }
+    }
+  }
+
+  return { caption, align, width, height };
+}
+
 export default function MarkdownRenderer({ content, className = "" }: Props) {
   return (
     <div className={`markdown-wrapper ${className}`}>
       <ReactMarkdown
-        // GitHub-flavored markdown (tables, task lists, etc.)
         remarkPlugins={[remarkGfm]}
-        // Allow inline HTML in markdown. Remove if content is untrusted.
+        // Allow inline HTML in markdown; keep only if you trust the source.
         rehypePlugins={[rehypeRaw]}
         components={{
           // HEADINGS
@@ -42,6 +63,7 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
           h4: (props) => (
             <h4 {...props} className="text-lg font-semibold text-[#212B36] mt-4 mb-2" />
           ),
+
           // PARAGRAPHS
           p: (props) => (
             <p
@@ -49,6 +71,7 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
               className="text-[15px] leading-7 text-[#1B2633] mb-4 whitespace-pre-line"
             />
           ),
+
           // EMPHASIS / STRONG
           em: (props) => <em {...props} className="italic" />,
           strong: (props) => <strong {...props} className="font-semibold" />,
@@ -70,7 +93,7 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
             />
           ),
 
-          // LINKS / IMAGES
+          // LINKS
           a: (props) => (
             <a
               {...props}
@@ -79,14 +102,74 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
               rel="noopener noreferrer"
             />
           ),
-          img: (props) => (
+
+          // IMAGES with alt options
+          img: (props) => {
             // eslint-disable-next-line @next/next/no-img-element
-            <img
-              {...props}
-              className="max-w-full h-auto rounded-md my-3"
-              alt={props.alt ?? ""}
-            />
-          ),
+            const { caption, align, width, height } = parseAltWithOptions(props.alt);
+
+            // Float right = text wraps around the image (good for your “image on right of text” need)
+            if (align === "right") {
+              return (
+                <figure className="my-2">
+                  <img
+                    {...props}
+                    alt={caption || props.alt || ""}
+                    className="float-right ml-4 mb-2 rounded-md shadow-sm"
+                    style={{
+                      width: width ? `${width}px` : undefined,
+                      height: height ? `${height}px` : undefined,
+                    }}
+                  />
+                  {caption ? (
+                    <figcaption className="clear-both text-xs text-[#6B778C] mt-2">
+                      {caption}
+                    </figcaption>
+                  ) : (
+                    <div className="clear-both" />
+                  )}
+                </figure>
+              );
+            }
+
+            // Centered image
+            if (align === "center") {
+              return (
+                <figure className="my-4 flex flex-col items-center">
+                  <img
+                    {...props}
+                    alt={caption || props.alt || ""}
+                    className="rounded-md shadow-sm"
+                    style={{
+                      width: width ? `${width}px` : undefined,
+                      height: height ? `${height}px` : undefined,
+                    }}
+                  />
+                  {caption ? (
+                    <figcaption className="text-xs text-[#6B778C] mt-2">{caption}</figcaption>
+                  ) : null}
+                </figure>
+              );
+            }
+
+            // Default (left)
+            return (
+              <figure className="my-3">
+                <img
+                  {...props}
+                  alt={caption || props.alt || ""}
+                  className="max-w-full h-auto rounded-md"
+                  style={{
+                    width: width ? `${width}px` : undefined,
+                    height: height ? `${height}px` : undefined,
+                  }}
+                />
+                {caption ? (
+                  <figcaption className="text-xs text-[#6B778C] mt-2">{caption}</figcaption>
+                ) : null}
+              </figure>
+            );
+          },
 
           // HORIZONTAL RULE
           hr: (props) => <hr {...props} className="my-6 border-gray-200" />,
@@ -108,9 +191,10 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
           ),
 
           // CODE (inline + fenced)
-          // NOTE: params are typed as `any` to silence TS complaining about `inline`
-          code({ node, inline, className, children, ...props }: any) {
+          // NOTE: use `any` here to avoid TS error about `inline`
+          code({ inline, className, children, ...rest }: any) {
             const match = /language-(\w+)/.exec(className || "");
+
             if (!inline) {
               return (
                 <div className="my-4 overflow-auto rounded-lg">
@@ -120,25 +204,26 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
                     PreTag="div"
                     customStyle={{
                       margin: 0,
-                      padding: "1rem 1rem",
+                      padding: "1rem",
                       fontSize: "0.9rem",
                       lineHeight: 1.6,
                       borderRadius: "0.5rem",
                       whiteSpace: "pre",
                       overflowX: "auto",
                     }}
-                    {...props}
+                    {...rest}
                   >
                     {String(children).replace(/\n$/, "")}
                   </SyntaxHighlighter>
                 </div>
               );
             }
+
             // inline code
             return (
               <code
                 className="px-1 py-0.5 rounded bg-gray-100 text-[#334155] text-[0.9em]"
-                {...props}
+                {...rest}
               >
                 {children}
               </code>

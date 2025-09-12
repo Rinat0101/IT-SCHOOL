@@ -1,35 +1,21 @@
-import { getCourse } from "@/lib/datocms";
+// app/courses/[courseSlug]/[sectionSlug]/page.tsx
 import { notFound } from "next/navigation";
+import { getSectionDeep } from "@/lib/datocms";
 import SectionClientPage from "./components/SectionClientPage";
-import { Course, Section } from "@/types";
 
 interface SectionPageProps {
-  params: {
-    courseSlug: string;
-    sectionSlug: string;
-  };
+  params: { courseSlug: string; sectionSlug: string };
 }
 
-export default async function SectionPage({
-  params: { courseSlug, sectionSlug },
-}: SectionPageProps) {
-  try {
-    const course: Course | null = await getCourse(courseSlug);
-    if (!course) return notFound();
+export default async function SectionPage({ params }: SectionPageProps) {
+  const data = await getSectionDeep(params.courseSlug, params.sectionSlug);
+  if (!data) return notFound();
 
-    const section: Section | undefined = course.sections.find(
-      (s) => s.slug === sectionSlug
-    );
-    if (!section) return notFound();
-
-    return (
-      <SectionClientPage
-        course={course}
-        section={section}
-      />
-    );
-  } catch (error) {
-    console.error("❌ Failed to load course section:", error);
-    return notFound();
-  }
+  // Pass the exact shapes your client needs (breadcrumb + full structure)
+  return (
+    <SectionClientPage
+      course={data.course}
+      section={data.section}
+    />
+  );
 }

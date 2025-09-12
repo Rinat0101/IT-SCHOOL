@@ -1,14 +1,15 @@
+// app/courses/[courseSlug]/[sectionSlug]/components/SectionClientPage.tsx
 "use client";
 
 import { useEffect } from "react";
 import { useCourseStore } from "@/stores/useCourseStore";
-import Breadcrumbs from "@/app/path"
+import Breadcrumbs from "@/app/path";
 import ModuleWrapper from "./ModuleWrapper";
-import type { Course, Section } from "@/types";
+import type { CourseHeader, SectionDeepForPage } from "@/types/index"; 
 
 interface SectionClientPageProps {
-  course: Course;
-  section: Section;
+  course: CourseHeader;            // slim
+  section: SectionDeepForPage;     // deep but no required parentCourse
 }
 
 export default function SectionClientPage({ course, section }: SectionClientPageProps) {
@@ -16,8 +17,10 @@ export default function SectionClientPage({ course, section }: SectionClientPage
   const setSelectedSection = useCourseStore((s) => s.setSelectedSection);
 
   useEffect(() => {
-    if (course) setSelectedCourse(course);
-    if (section) setSelectedSection(section);
+    // If your store expects full Course/Section,
+    // casting is OK here; or update your store types to accept partials.
+    setSelectedCourse(course as any);
+    setSelectedSection(section as any);
   }, [course, section, setSelectedCourse, setSelectedSection]);
 
   return (
@@ -29,7 +32,7 @@ export default function SectionClientPage({ course, section }: SectionClientPage
           items={[
             { label: "Courses", href: "/courses" },
             { label: course.name, href: `/courses/${course.slug}` },
-            { label: section.title }, 
+            { label: section.title },
           ]}
           className="mb-6"
         />

@@ -2,29 +2,34 @@
 // Domain types (app-level model)
 // ==============================
 
+export type LanguageCode = "en" | "ru" | string;
+
 export type User = {
   id: string;
   name: string;
   last_name: string;
   email: string;
   password: string;
-  language: "en" | "ru" | string;
-  profile_picture?: { url: string };
-  github?: string;
-  linkedin?: string;
-  personal_website?: string;
+  language: LanguageCode;
+  profile_picture?: { url: string } | null;
+  github?: string | null;
+  linkedin?: string | null;
+  personal_website?: string | null;
+
+  // Business note: purchases/enrollments should live in your own DB; this remains for convenience
   purchasedCourses: Course[];
 };
+
+// ---------- Course hierarchy ----------
 
 export type Course = {
   id: string;
   name: string;
   slug: string;
-  url?: string;
   enabled: boolean;
-  startDate?: string;
-  endDate?: string;
-  language: "en" | "ru" | string;
+  language: LanguageCode;
+  coverImage?: { url: string } | null;
+
   sections: Section[];
 };
 
@@ -33,8 +38,58 @@ export type Section = {
   title: string;
   slug: string;
   order: number;
+  enabled?: boolean | null;
+  shortDescription?: string | null;
+  coverImage?: { url: string } | null;
+
   modules: Module[];
-  parentCourse: Course;
+
+  // pointer up for convenience in UI (breadcrumb, back links)
+  parentCourse: Pick<Course, "id" | "name" | "slug">;
+};
+
+// Page-scoped slimmer shapes
+export type CourseHeader = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
+export type SectionDeepForPage = {
+  id: string;
+  title: string;
+  slug: string;
+  order?: number | null;
+  // Optional: light link back to course if you want it on the section object too
+  parentCourse?: CourseHeader;
+
+  modules: {
+    id: string;
+    title: string;
+    slug: string;
+    order?: number | null;
+    weeks: {
+      id: string;
+      title: string;
+      slug: string;
+      order?: number | null;
+      days: {
+        id: string;
+        title: string;
+        slug: string;
+        order?: number | null;
+        lessons: {
+          id: string;
+          title: string;
+          slug: string;
+          lessonType: "Lesson" | "Lab" | "Assessment" | "Class Recording" | "Extra";
+          isMandatory: boolean;
+          order?: number | null;
+          weight?: number | null;
+        }[];
+      }[];
+    }[];
+  }[];
 };
 
 export type Module = {
@@ -42,8 +97,10 @@ export type Module = {
   title: string;
   slug: string;
   order: number;
+
   weeks: Week[];
-  parentSection: Section;
+
+  parentSection: Pick<Section, "id" | "title" | "slug">;
 };
 
 export type Week = {
@@ -51,8 +108,11 @@ export type Week = {
   title: string;
   slug: string;
   order: number;
+  enabled?: boolean | null;
+
   days: Day[];
-  parentModule: Module;
+
+  parentModule: Pick<Module, "id" | "title" | "slug">;
 };
 
 export type Day = {
@@ -60,32 +120,15 @@ export type Day = {
   title: string;
   slug: string;
   order: number;
+  enabled?: boolean | null;
+
   lessons: Lesson[];
-  parentWeek: Week; // keep for places that still use Week/Module navigation
+
+  parentWeek: Pick<Week, "id" | "title" | "slug">;
 };
 
-// Lightweight day used elsewhere in the app (kept for compatibility)
+// Lightweight “day” used where we don’t need parent pointers
 export type DayLite = {
-  id: string;
-  title: string;
-  slug: string;
-  order: number;
-  parentWeek: {
-    id: string;
-    title: string;
-    slug: string;
-  };
-  lessons: {
-    id: string;
-    title: string;
-    slug: string;
-    lessonType: Lesson["lessonType"];
-    isMandatory: boolean;
-  }[];
-};
-
-// NEW: minimal Day type for the Lesson page breadcrumb needs (no week/module)
-export type DayForLessonPage = {
   id: string;
   title: string;
   slug: string;
@@ -98,16 +141,6 @@ export type DayForLessonPage = {
     isMandatory: boolean;
     order?: number | null;
   }[];
-  section: {
-    id: string;
-    title: string;
-    slug: string;
-    course: {
-      id: string;
-      name: string;
-      slug: string;
-    };
-  };
 };
 
 // ==============================
@@ -126,19 +159,21 @@ export type ExtraResourceItemRecord = {
   url?: string | null;
 };
 
+export type TextSubsection = { id: string; title?: string | null; text?: string | null };
+
 export type TextBlockRecord = {
   __typename: "TextBlockRecord";
   id: string;
   title?: string | null;
   content: string;
-  subsections?: { id: string; text: string }[] | null;
+  subsections?: TextSubsection[] | null;
 };
 
 export type ImageBlockRecord = {
   __typename: "ImageBlockRecord";
   id: string;
   title?: string | null;
-  imageContent?: { url: string } | null; // <-- GraphQL field name
+  imageContent?: { url: string } | null; // GraphQL field name
 };
 
 export type VideoBlockRecord = {
@@ -171,7 +206,7 @@ export type DatoCmsLessonBlock =
   | AlertBlockRecord;
 
 // ==============================
-// Lessons (domain + DatoCMS)
+// Lessons
 // ==============================
 
 export type Lesson = {
@@ -179,13 +214,17 @@ export type Lesson = {
   title: string;
   slug: string;
   lessonType: "Lesson" | "Lab" | "Assessment" | "Class Recording" | "Extra";
+  order: number;                 // required in your model
   isMandatory: boolean;
-  content: DatoCmsLessonBlock[];      // uses the union above
-  extraResources?: ExtraResourceBlock[]; // optional
-  parentDay: Day;
+  weight: number;                // required in your model
+
+  content: DatoCmsLessonBlock[];
+  extraResources?: ExtraResourceBlock[] | null;
+
+  parentDay: Pick<Day, "id" | "title" | "slug">;
 };
 
-// Lightweight version you often pass around
+// Minimal lesson used in lists/nav
 export type LessonLite = {
   id: string;
   title: string;

@@ -1,41 +1,49 @@
 // components/MarkdownRenderer.tsx
 "use client";
 
-import React from "react";
+import React, { ReactNode, ReactElement } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { duotoneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { duotoneLight } from "react-syntax-highlighter/dist/cjs/styles/prism";
 
 type Props = {
   content: string;
   className?: string;
 };
 
+// Utility to normalize children to an array
+function toArray(children: ReactNode): ReactNode[] {
+  return Array.isArray(children) ? children : [children];
+}
+
 // Parses alt like: "My caption | align:right w:300 h:180"
 function parseAltWithOptions(rawAlt?: string) {
   const alt = (rawAlt ?? "").trim();
-  if (!alt) return { caption: "", align: "", width: undefined as number | undefined, height: undefined as number | undefined };
+  if (!alt)
+    return {
+      caption: "",
+      align: "",
+      width: undefined as number | undefined,
+      height: undefined as number | undefined,
+    };
 
-  const [maybeCaption, maybeOpts] = alt.split("|").map((s) => s.trim());
+  const hasPipe = alt.includes("|");
+  const [maybeCaption, maybeOpts] = hasPipe ? alt.split("|").map((s) => s.trim()) : [alt, ""];
 
-  let caption = maybeCaption || "";
+  // Only render caption if user added "|"
+  const caption = hasPipe ? maybeCaption || "" : "";
   let align = "";
   let width: number | undefined;
   let height: number | undefined;
 
   if (maybeOpts) {
-    // options are space-separated: align:right w:300 h:200
-    const parts = maybeOpts.split(/\s+/);
+    const parts = maybeOpts.split(/\s+/).filter(Boolean);
     for (const p of parts) {
-      if (/^align:(left|right|center)$/i.test(p)) {
-        align = p.split(":")[1].toLowerCase();
-      } else if (/^w:\d+$/i.test(p)) {
-        width = parseInt(p.split(":")[1], 10);
-      } else if (/^h:\d+$/i.test(p)) {
-        height = parseInt(p.split(":")[1], 10);
-      }
+      if (/^align:(left|right|center)$/i.test(p)) align = p.split(":")[1].toLowerCase();
+      else if (/^w:\d+$/i.test(p)) width = parseInt(p.split(":")[1], 10);
+      else if (/^h:\d+$/i.test(p)) height = parseInt(p.split(":")[1], 10);
     }
   }
 
@@ -47,13 +55,10 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
     <div className={`markdown-wrapper ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        // Allow inline HTML in markdown; keep only if you trust the source.
         rehypePlugins={[rehypeRaw]}
         components={{
           // HEADINGS
-          h1: (props) => (
-            <h1 {...props} className="text-3xl font-bold text-[#212B36] mt-6 mb-4" />
-          ),
+          h1: (props) => <h1 {...props} className="text-3xl font-bold text-[#212B36] mt-6 mb-4" />,
           h2: (props) => (
             <h2 {...props} className="text-2xl font-semibold text-[#212B36] mt-6 mb-3" />
           ),
@@ -73,13 +78,19 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
           ),
 
           // EMPHASIS / STRONG
-          em: (props) => <em {...props} className="italic" />,
-          strong: (props) => <strong {...props} className="font-semibold" />,
+          em: ({ children, ...rest }) => (
+            <em {...rest} className="italic">
+              {children}
+            </em>
+          ),
+          strong: ({ children, ...rest }) => (
+            <strong {...rest} className="font-semibold">
+              {children}
+            </strong>
+          ),
 
           // LISTS
-          ul: (props) => (
-            <ul {...props} className="list-disc pl-6 space-y-2 mb-4 text-[#1B2633]" />
-          ),
+          ul: (props) => <ul {...props} className="list-disc pl-6 space-y-2 mb-4 text-[#1B2633]" />,
           ol: (props) => (
             <ol {...props} className="list-decimal pl-6 space-y-2 mb-4 text-[#1B2633]" />
           ),
@@ -103,18 +114,16 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
             />
           ),
 
-          // IMAGES with alt options
+          // IMAGES
           img: (props) => {
-            // eslint-disable-next-line @next/next/no-img-element
             const { caption, align, width, height } = parseAltWithOptions(props.alt);
 
-            // Float right = text wraps around the image (good for your “image on right of text” need)
             if (align === "right") {
               return (
                 <figure className="my-2">
                   <img
                     {...props}
-                    alt={caption || props.alt || ""}
+                    alt=""
                     className="float-right ml-4 mb-2 rounded-md shadow-sm"
                     style={{
                       width: width ? `${width}px` : undefined,
@@ -132,13 +141,12 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
               );
             }
 
-            // Centered image
             if (align === "center") {
               return (
                 <figure className="my-4 flex flex-col items-center">
                   <img
                     {...props}
-                    alt={caption || props.alt || ""}
+                    alt=""
                     className="rounded-md shadow-sm"
                     style={{
                       width: width ? `${width}px` : undefined,
@@ -152,12 +160,11 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
               );
             }
 
-            // Default (left)
             return (
               <figure className="my-3">
                 <img
                   {...props}
-                  alt={caption || props.alt || ""}
+                  alt=""
                   className="max-w-full h-auto rounded-md"
                   style={{
                     width: width ? `${width}px` : undefined,
@@ -186,30 +193,29 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
               className="text-left px-3 py-2 bg-gray-50 border-b border-gray-200 font-semibold"
             />
           ),
-          td: (props) => (
-            <td {...props} className="px-3 py-2 border-b border-gray-100" />
-          ),
+          td: (props) => <td {...props} className="px-3 py-2 border-b border-gray-100" />,
 
-          // CODE (inline + fenced)
-          // NOTE: use `any` here to avoid TS error about `inline`
+          // CODE
           code({ inline, className, children, ...rest }: any) {
             const match = /language-(\w+)/.exec(className || "");
 
             if (!inline) {
               return (
-                <div className="my-4 overflow-auto rounded-lg">
+                <div className="my-4 overflow-auto rounded-lg bg-gray-100 border border-gray-200">
                   <SyntaxHighlighter
-                    style={duotoneDark}
+                    style={duotoneLight}
                     language={match ? match[1] : undefined}
                     PreTag="div"
+                    showLineNumbers
+                    wrapLines
                     customStyle={{
                       margin: 0,
                       padding: "1rem",
                       fontSize: "0.9rem",
                       lineHeight: 1.6,
                       borderRadius: "0.5rem",
-                      whiteSpace: "pre",
-                      overflowX: "auto",
+                      background: "#F8F9FA",
+                      color: "#1B2633",
                     }}
                     {...rest}
                   >
@@ -219,10 +225,9 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
               );
             }
 
-            // inline code
             return (
               <code
-                className="px-1 py-0.5 rounded bg-gray-100 text-[#334155] text-[0.9em]"
+                className="px-1 py-0.5 rounded bg-gray-200 text-[#212B36] text-[0.9em]"
                 {...rest}
               >
                 {children}

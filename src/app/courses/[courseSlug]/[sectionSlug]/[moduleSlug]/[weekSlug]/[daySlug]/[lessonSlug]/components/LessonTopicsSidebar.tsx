@@ -24,8 +24,8 @@ export default function LessonTopicsSidebar({
 }: Props) {
   const hasExtra = Array.isArray(extraResources) && extraResources.length > 0;
   const EXTRA_ID = "extra-resources";
-  const HEADER_OFFSET = 80;         // fixed header height
-  const PIVOT_OFFSET = 120;         // distance below header to judge “current”
+  const HEADER_OFFSET = 80;  // fixed header height
+  const PIVOT_OFFSET = 120;  // distance below header to judge “current”
 
   // ---------- build sections (plus Extra Resources at end) ----------
   const sections = useMemo<SidebarSection[]>(() => {
@@ -164,7 +164,7 @@ export default function LessonTopicsSidebar({
     };
   }, [sections, activeId, hasExtra]);
 
-  // ---------- clicking a topic → smooth scroll + suppression ----------
+  // ---------- smooth scroll helper ----------
   const scrollToId = (id?: string) => {
     if (!id) return;
     const el = document.getElementById(id);
@@ -204,6 +204,7 @@ export default function LessonTopicsSidebar({
 
               <div className="pl-4 pr-2">
                 <div className="flex items-center">
+                  {/* SECTION TITLE (clickable) */}
                   <button
                     type="button"
                     onClick={() => {
@@ -220,6 +221,7 @@ export default function LessonTopicsSidebar({
                     {sec.title}
                   </button>
 
+                  {/* toggler for subsections */}
                   {hasSubs ? (
                     <button
                       type="button"
@@ -229,11 +231,10 @@ export default function LessonTopicsSidebar({
                         e.stopPropagation();
                         const next = isOpen ? null : sec.id;
                         setOpenId(next);
-                        if (next) setActiveId(sec.id); // keep states aligned
+                        if (next) setActiveId(sec.id);
                       }}
                       className="ml-1 p-2 rounded-md text-[#6B778C] hover:bg-gray-100"
                     >
-                      {/* chevron drawn with borders to match mockup */}
                       <span
                         className={`inline-block border-t-[2px] border-l-[2px] border-current w-2.5 h-2.5 transform transition-transform origin-center ${
                           isOpen
@@ -249,17 +250,35 @@ export default function LessonTopicsSidebar({
                 </div>
               </div>
 
-              {/* subsections (display only) */}
+              {/* subsections (NOW CLICKABLE) */}
               {isOpen && hasSubs && (
                 <ul className="mt-1 pl-7 space-y-2">
-                  {sec.subsections.map((sub) => (
-                    <li key={sub.id} className="flex items-start gap-2">
-                      <span className="mt-2 h-1.5 w-1.5 rounded-full bg-[#7A869A]" />
-                      <span className="text-[13px] leading-5 text-[#6B778C]">
-                        {sub.label}
-                      </span>
-                    </li>
-                  ))}
+                  {sec.subsections.map((sub) => {
+                    const clickable = !!sub.targetId;
+                    return (
+                      <li key={sub.id} className="flex items-start gap-2">
+                        <span className="mt-2 h-1.5 w-1.5 rounded-full bg-[#7A869A]" />
+                        {clickable ? (
+                          <a
+                            href={`#${sub.targetId}`}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setActiveId(sec.id);
+                              setOpenId(sec.id);
+                              scrollToId(sub.targetId);
+                            }}
+                            className="text-[13px] leading-5 text-[#6B778C] hover:text-[#202733]"
+                          >
+                            {sub.label}
+                          </a>
+                        ) : (
+                          <span className="text-[13px] leading-5 text-[#6B778C]">
+                            {sub.label}
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>

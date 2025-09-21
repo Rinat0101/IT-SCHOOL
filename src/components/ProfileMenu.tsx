@@ -1,10 +1,8 @@
-// 
-
-// components/ProfileMenu.tsx
 "use client";
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import LogoutButton from "@/components/LogoutButton";
 
 type UserLite = {
@@ -87,7 +85,19 @@ export default function ProfileMenu({ user }: { user: UserLite }) {
 
           <div className="h-px bg-gray-100" />
 
-          {/* Logout (outlined style per your mock) */}
+          {/* About me */}
+          <div className="px-5 py-2">
+            <Link
+              href="/about"
+              className="block w-full text-left text-sm font-semibold text-[#1B2633] hover:text-[#B923AE] transition-colors"
+            >
+              About me
+            </Link>
+          </div>
+
+          <div className="h-px bg-gray-100" />
+
+          {/* Logout */}
           <div className="px-5 pb-4 pt-2">
             <LogoutButton />
           </div>

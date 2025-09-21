@@ -79,5 +79,6 @@ body {
 .text-gray-1 { color: var(--gray-1); }
 .text-gray-2 { color: var(--gray-2); }
 
-/* IMPORTANT: Do NOT override Tailwind utilities like .text-black */
-/* (Removed the .text-black rule) */
+.input {
+  @apply w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-[#3880E8] transition;
+}

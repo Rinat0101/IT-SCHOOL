@@ -14,8 +14,9 @@ export default function Navbar() {
   const user = (session?.user ?? {}) as SafeUser;
 
   return (
-    <header className="w-full bg-white mb-6">
-      <div className="mx-auto max-w-[1200px] px-6 md:px-8 py-4 flex items-center">
+    // fixed height + border, no bottom margin
+    <header className="w-full bg-white border-b border-gray-100">
+      <div className="mx-auto max-w-[1200px] px-6 md:px-8 h-16 flex items-center">
         <div className="shrink-0">
           <Link href="/dashboard" aria-label="Home" className="flex items-center gap-2">
             <Image src="/images/logo.svg" alt="Logo" width={62} height={44} priority />
@@ -42,7 +43,6 @@ export default function Navbar() {
           )}
         </div>
       </div>
-      <div className="h-px bg-gray-100" />
     </header>
   );
 }

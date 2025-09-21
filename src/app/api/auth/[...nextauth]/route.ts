@@ -1,18 +1,7 @@
-import NextAuth from "next-auth";
-import type { NextAuthOptions } from "next-auth";
+import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { GraphQLClient, gql } from "graphql-request";
-import bcrypt from "bcryptjs";
-
-const client = new GraphQLClient("https://graphql.datocms.com/", {
-  headers: {
-    authorization: `Bearer ${process.env.DATOCMS_API_KEY}`,
-  },
-});
-console.log("✅ API KEY:", process.env.DATOCMS_API_KEY);
-console.log("✅ NEXTAUTH_SECRET:", process.env.NEXTAUTH_SECRET);
-
-console.log("🔥 AUTH ROUTE LOADED");
+import connectDB from "@/lib/mongoose";
+import User from "@/models/User";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -25,31 +14,19 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const query = gql`
-          query getUser($email: String!) {
-            user(filter: { email: { eq: $email } }) {
-              id
-              email
-              password
-            }
-          }
-        `;
-
         try {
-          const data = await client.request(query, { email: credentials.email });
+          await connectDB();
+          const user = await User.findOne({ email: credentials.email });
+          if (!user) return null;
 
-          if (!data.user) return null;
-          console.log("🔐 Email:", credentials.email);
-          console.log("🔐 Entered password:", credentials.password);
-          console.log("🔐 Stored password:", data.user.password);
-          
-          //const isValid = credentials.password === data.user.password;
-         const isValid = await bcrypt.compare(credentials.password, data.user.password);
+          const isValid = await user.comparePassword(credentials.password);
           if (!isValid) return null;
 
           return {
-            id: data.user.id,
-            email: data.user.email,
+            id: user._id.toString(),
+            email: user.email,
+            name: `${user.name} ${user.lastName}`,
+            role: user.role,
           };
         } catch (error) {
           console.error("Auth error:", error);
@@ -61,27 +38,23 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     async jwt({ token, user }) {
-      if (user?.id) {
+      if (user) {
         token.id = user.id;
+        token.role = user.role;
       }
       return token;
     },
     async session({ session, token }) {
-      if (token?.id && session.user) {
+      if (session.user) {
         session.user.id = token.id as string;
+        session.user.role = token.role as string;
       }
       return session;
     },
   },
 
-  session: {
-    strategy: "jwt",
-  },
-
-  pages: {
-    signIn: "/login",
-  },
-
+  session: { strategy: "jwt" },
+  pages: { signIn: "/login" },
   secret: process.env.NEXTAUTH_SECRET,
 };
 

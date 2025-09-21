@@ -1,46 +1,40 @@
+// app/login/page.tsx
 "use client";
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Navbar from "@/app/navbar";
+import Image from "next/image";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
+  const [forgotOpen, setForgotOpen] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
-
-    if (result?.error) {
-      setError("Invalid credentials");
-    } else {
-      router.push("/courses");
-    }
+    const result = await signIn("credentials", { email, password, redirect: false });
+    if (result?.error) setError("Invalid credentials");
+    else router.push("/courses");
   };
 
   return (
-    <div className="bg-white min-h-screen">
-      <main className="flex items-center justify-center">
+    <div className="bg-white">
+      <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4">
+        {/* 4rem = navbar height */}
+
         {/* Desktop Form */}
-        <div className="hidden lg:flex flex-col items-center justify-center bg-white rounded-2xl dialog-shadow min-h-[32rem] h-full max-w-[24rem] w-full p-6 gap-6 pt-2">
-          {/* Logo + Heading */}
+        <div className="hidden lg:flex flex-col items-center justify-center bg-white rounded-2xl dialog-shadow h-full max-w-[24rem] w-full p-6 gap-6">
           <div className="flex flex-col items-center">
             <img src="/images/logo.png" alt="ProCoding Logo" className="w-[14.75rem] h-auto" />
             <h2 className="text-2xl font-semibold text-center text-[#000000]">Log In</h2>
           </div>
 
-          {/* Error message */}
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-6 w-full items-center">
             {/* Email */}
             <div className="relative w-full h-12">
@@ -48,20 +42,16 @@ export default function LoginPage() {
                 type="email"
                 id="email"
                 required
-                placeholder=" " // keep a single space for :placeholder-shown
+                placeholder=" "
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="peer absolute inset-0 w-full h-full rounded-lg border border-[#919EAB52]
-               bg-transparent px-4 py-3 text-[#000000] outline-none
-               focus:border-[#3880E8] transition-colors"
+                className="peer absolute inset-0 w-full h-full rounded-lg border border-[#919EAB52] bg-transparent px-4 py-3 text-[#000] outline-none focus:border-[#3880E8] transition-colors"
               />
               <label
                 htmlFor="email"
-                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2
-               bg-white px-1 text-sm text-gray-500 transition-all
-               peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-[12px] peer-focus:text-[#3880E8]
-               peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:-translate-y-1/2
-               peer-[:not(:placeholder-shown)]:text-[12px]"
+                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 bg-white px-1 text-sm text-gray-500 transition-all
+                peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-[12px] peer-focus:text-[#3880E8]
+                peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:-translate-y-1/2 peer-[:not(:placeholder-shown)]:text-[12px]"
               >
                 Email
               </label>
@@ -70,56 +60,89 @@ export default function LoginPage() {
             {/* Password */}
             <div className="relative w-full h-12">
               <input
-                type="password"
+                type={showPw ? "text" : "password"}
                 id="password"
                 required
                 placeholder=" "
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="peer absolute inset-0 w-full h-full rounded-lg border border-[#919EAB52]
-               bg-transparent px-4 py-3 text-[#000000] outline-none
-               focus:border-[#3880E8] transition-colors"
+                className="peer absolute inset-0 w-full h-full rounded-lg border border-[#919EAB52] bg-transparent px-4 py-3 pr-12 text-[#000] outline-none focus:border-[#3880E8] transition-colors"
               />
               <label
                 htmlFor="password"
-                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2
-               bg-white px-1 text-sm text-gray-500 transition-all
-               peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-[12px] peer-focus:text-[#3880E8]
-               peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:-translate-y-1/2
-               peer-[:not(:placeholder-shown)]:text-[12px]"
+                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 bg-white px-1 text-sm text-gray-500 transition-all
+                peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-[12px] peer-focus:text-[#3880E8]
+                peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:-translate-y-1/2 peer-[:not(:placeholder-shown)]:text-[12px]"
               >
                 Password
               </label>
+
+              <button
+                type="button"
+                onClick={() => setShowPw((s) => !s)}
+                aria-label={showPw ? "Hide password" : "Show password"}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-100"
+              >
+                <Image
+                  src={showPw ? "/icons/eye-off.svg" : "/icons/eye.svg"}
+                  alt="toggle password visibility"
+                  width={20}
+                  height={20}
+                />
+              </button>
             </div>
 
-            {/* Bottom Section */}
-            <div className="flex justify-between items-center w-full text-sm">
-              <label className="flex items-center gap-2 text-[#000000]">
-                <input type="checkbox" />
-                Remember me
-              </label>
-              <a href="#" className="text-blue-2 font-bold hover:underline">
+            {/* Forgot password */}
+            <div className="flex w-full justify-end">
+              <button
+                type="button"
+                onClick={() => setForgotOpen(true)}
+                className="text-blue-2 font-semibold hover:underline text-sm"
+              >
                 Forgot Password
-              </a>
+              </button>
             </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              className="w-full text-white bg-blue-1 py-2 rounded-lg btn-shadow"
-            >
+            <button type="submit" className="w-full text-white bg-blue-1 py-2 rounded-lg btn-shadow">
               Login
             </button>
           </form>
         </div>
 
-        {/* Mobile/Tablet Message */}
+        {/* Mobile/Tablet message */}
         <div className="lg:hidden flex flex-col items-center justify-center text-center p-8">
           <p className="text-xl font-semibold text-gray">
             You can only truly enjoy our platform using big screens.
           </p>
         </div>
       </main>
+
+      {/* Forgot password popover - centered text + blue button */}
+      {forgotOpen && (
+        <div
+          className="fixed inset-0 bg-black/30 flex items-center justify-center z-50"
+          onClick={() => setForgotOpen(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-lg p-6 w-[92%] max-w-sm text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold mb-3">Forgot Password</h3>
+            <p className="text-sm text-[#1B2633] mb-4">
+              In case you forgot your credentials, please contact us at <br />
+              <a href="mailto:support@procoding.com" className="text-blue-600 underline">
+                support@procoding.com
+              </a>
+            </p>
+            <button
+              className="w-full px-4 py-2 rounded-lg bg-blue-1 text-white font-medium hover:opacity-90 transition"
+              onClick={() => setForgotOpen(false)}
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

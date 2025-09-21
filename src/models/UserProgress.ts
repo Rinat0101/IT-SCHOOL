@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IUserProgress extends Document {
   userEmail: string;
@@ -7,12 +7,24 @@ export interface IUserProgress extends Document {
   updatedAt: Date;
 }
 
-const UserProgressSchema: Schema = new Schema({
-  userEmail: { type: String, required: true },
-  courseId: { type: String, required: true },
-  completedLessons: [{ type: String }],
-  updatedAt: { type: Date, default: Date.now },
-});
+const UserProgressSchema = new Schema<IUserProgress>(
+  {
+    userEmail: { type: String, required: true },
+    courseId: { type: String, required: true },
+    completedLessons: [{ type: String }],
+    updatedAt: { type: Date, default: Date.now },
+  },
+  {
+    timestamps: true, // ✅ adds createdAt & updatedAt automatically
+  }
+);
 
-export default mongoose.models.UserProgress ||
+// ✅ ensure (userEmail + courseId) is unique
+UserProgressSchema.index({ userEmail: 1, courseId: 1 }, { unique: true });
+
+// ✅ Avoid OverwriteModelError in Next.js (hot reload safe)
+const UserProgress: Model<IUserProgress> =
+  mongoose.models.UserProgress ||
   mongoose.model<IUserProgress>("UserProgress", UserProgressSchema);
+
+export default UserProgress;

@@ -4,6 +4,7 @@
 import { useMemo } from "react";
 import Breadcrumbs from "@/app/path";
 import LessonBlockRenderer from "./components/LessonBlockRenderer";
+import CodepenEmbed from "../../../../../../../../components/CodepenEmbed";
 import LessonTopicsSidebar from "./components/LessonTopicsSidebar";
 import DaySideBar from "./components/DaySideBar";
 import ExtraResources from "./components/ExtraResources";
@@ -79,8 +80,8 @@ export default function LessonPage({
           {/* LEFT: Day sidebar */}
           <aside className="lg:w-[260px] flex-shrink-0">
             <DaySideBar
-              key={day.id}                       // ensures reset when switching day
-              baseHref={baseHref}                 // server-built, always correct
+              key={day.id}
+              baseHref={baseHref}
               lessons={lessonsSorted}
               currentLessonSlug={lesson.slug}
               currentDayTitle={day.title}
@@ -89,34 +90,36 @@ export default function LessonPage({
           </aside>
 
           {/* MIDDLE: Content */}
-          <div className="flex-1">
-            <div className="rounded-2xl shadow-md p-6 md:p-8 bg-white">
-              <h1 className="text-3xl font-bold text-[#212B36] mb-4">{lesson.title}</h1>
+          <div className="flex-1 flex justify-center">
+            <div className="w-full max-w-[800px]">
+              <div className="rounded-2xl shadow-md p-6 md:p-8 bg-white">
+                <h1 className="text-3xl font-bold text-[#212B36] mb-4">{lesson.title}</h1>
 
-              <Breadcrumbs
-                items={[
-                  { label: "Courses", href: "/courses" },
-                  { label: courseTitle, href: `/courses/${courseSlug}` },
-                  { label: sectionTitle, href: `/courses/${courseSlug}/${sectionSlug}` },
-                  { label: lesson.title },
-                ]}
-                className="mb-6"
-              />
+                <Breadcrumbs
+                  items={[
+                    { label: "Courses", href: "/courses" },
+                    { label: courseTitle, href: `/courses/${courseSlug}` },
+                    { label: sectionTitle, href: `/courses/${courseSlug}/${sectionSlug}` },
+                    { label: lesson.title },
+                  ]}
+                  className="mb-6"
+                />
 
-              <LessonBlockRenderer blocks={blocks} />
-            </div>
+                <LessonBlockRenderer blocks={blocks} />
+              </div>
 
-            {/* Extra Resources */}
-            <section id="extra-resources" className="mt-8">
-              <ExtraResources resources={lesson.extraResources ?? []} />
-            </section>
+              {/* Extra Resources */}
+              <section id="extra-resources" className="mt-8">
+                <ExtraResources resources={lesson.extraResources ?? []} />
+              </section>
 
-            {/* Prev/Next navigation */}
-            <div className="mt-8">
-              <LessonNavButtons
-                currentLesson={{ id: lesson.id, slug: lesson.slug, title: lesson.title }}
-                lessons={lessonsSorted.map(({ slug, title }) => ({ slug, title }))}
-              />
+              {/* Prev/Next navigation */}
+              <div className="mt-8">
+                <LessonNavButtons
+                  currentLesson={{ id: lesson.id, slug: lesson.slug, title: lesson.title }}
+                  lessons={lessonsSorted.map(({ slug, title }) => ({ slug, title }))}
+                />
+              </div>
             </div>
           </div>
 

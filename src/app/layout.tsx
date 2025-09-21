@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import Navbar from "@/app/navbar";
 import AuthProvider from "@/components/AuthProvider";
+import CodepenEmbed from "@/components/CodepenEmbed"; // ✅ add this
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const session = await getServerSession(authOptions);
@@ -16,6 +17,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           <Navbar />
           <main className="flex-1 p-0 m-0 bg-white">{children}</main>
         </AuthProvider>
+
+        {/* ✅ ensures the CodePen embed script is loaded once globally */}
+        <CodepenEmbed />
       </body>
     </html>
   );

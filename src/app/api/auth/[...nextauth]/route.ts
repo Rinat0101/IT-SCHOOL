@@ -16,7 +16,14 @@ export const authOptions: NextAuthOptions = {
 
         try {
           await connectDB();
-          const user = await User.findOne({ email: credentials.email });
+
+          // 🔹 populate enrollments with course info
+          const user = await User.findOne({ email: credentials.email })
+            .populate({
+              path: "enrollments",
+              populate: { path: "courseId" }, // fetch course data
+            });
+
           if (!user) return null;
 
           const isValid = await user.comparePassword(credentials.password);
@@ -27,6 +34,7 @@ export const authOptions: NextAuthOptions = {
             email: user.email,
             name: `${user.name} ${user.lastName}`,
             role: user.role,
+            enrollments: user.enrollments || [],
           };
         } catch (error) {
           console.error("Auth error:", error);
@@ -39,15 +47,17 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
-        token.role = user.role;
+        token.id = (user as any).id;
+        token.role = (user as any).role;
+        token.enrollments = (user as any).enrollments || [];
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        session.user.role = token.role as string;
+        session.user.role = token.role as "student" | "admin";
+        session.user.enrollments = token.enrollments || [];
       }
       return session;
     },

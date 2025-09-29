@@ -4,11 +4,11 @@
 import { useMemo } from "react";
 import Breadcrumbs from "@/app/path";
 import LessonBlockRenderer from "./components/LessonBlockRenderer";
-import CodepenEmbed from "../../../../../../../../components/CodepenEmbed";
 import LessonTopicsSidebar from "./components/LessonTopicsSidebar";
 import DaySideBar from "./components/DaySideBar";
 import ExtraResources from "./components/ExtraResources";
 import LessonNavButtons from "./components/LessonNavButtons";
+import LabLesson from "./components/LabLesson";
 
 import type {
   Lesson as LessonType,
@@ -25,6 +25,7 @@ type MinimalLesson = {
   order?: number | null;
   content: DatoCmsLessonBlock[];
   extraResources?: ExtraResourceBlock[];
+  labDescription?: string | null;
 };
 
 type DayLiteForPage = {
@@ -54,16 +55,23 @@ export interface LessonPageProps {
 
   /** Provided by server page.tsx so DaySidebar never guesses from URL */
   baseHref: string;
+
+  /** 🆕 From server-side enrollment check */
+  enrollmentId: string;
+  completedLessons: string[];
 }
 
 export default function LessonPage({
   lesson,
   day,
+  courseId,
   courseSlug,
   courseTitle,
   sectionSlug,
   sectionTitle,
   baseHref,
+  enrollmentId,
+  completedLessons,
 }: LessonPageProps) {
   const blocks = lesson?.content ?? [];
 
@@ -86,6 +94,7 @@ export default function LessonPage({
               currentLessonSlug={lesson.slug}
               currentDayTitle={day.title}
               sectionHref={`/courses/${courseSlug}/${sectionSlug}`}
+              completedLessons={completedLessons}
             />
           </aside>
 
@@ -105,7 +114,16 @@ export default function LessonPage({
                   className="mb-6"
                 />
 
-                <LessonBlockRenderer blocks={blocks} />
+                {/* Render LabLesson if it's a lab, otherwise normal blocks */}
+                {lesson.lessonType === "Lab" ? (
+                  <LabLesson
+                    labDescription={lesson.labDescription}
+                    lessonId={lesson.id}
+                    enrollmentId={enrollmentId}
+                  />
+                ) : (
+                  <LessonBlockRenderer blocks={blocks} />
+                )}
               </div>
 
               {/* Extra Resources */}

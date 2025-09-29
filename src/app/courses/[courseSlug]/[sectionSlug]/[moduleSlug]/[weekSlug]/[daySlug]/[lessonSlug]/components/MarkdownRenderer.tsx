@@ -124,6 +124,14 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw]}
         components={{
+          a: ({ node, ...props }) => (
+            <a
+              {...props}
+              className="text-purple-600 underline hover:text-purple-800 transition-colors"
+              target="_blank"
+              rel="noopener noreferrer"
+            />
+          ),
           // Headings
           h1: (props) => <h1 {...props} className="text-3xl font-bold text-[#212B36] mt-6 mb-4" />,
           h2: (props) => <h2 {...props} className="text-2xl font-semibold text-[#212B36] mt-6 mb-3" />,

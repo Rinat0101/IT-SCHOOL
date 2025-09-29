@@ -14,6 +14,9 @@ export interface IUser extends Document {
   createdAt: Date;
   updatedAt: Date;
 
+  // 🔹 New: Enrollments
+  enrollments?: mongoose.Types.ObjectId[];
+
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -28,6 +31,9 @@ const UserSchema: Schema<IUser> = new Schema(
     linkedin: String,
     personalWebsite: String,
     profilePicture: String,
+
+    // 🔹 New field for enrollments
+    enrollments: [{ type: Schema.Types.ObjectId, ref: "Enrollment" }],
   },
   { timestamps: true }
 );
@@ -45,7 +51,7 @@ UserSchema.methods.comparePassword = async function (candidatePassword: string) 
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// ⚠️ Always delete old model before redefining (avoids cached schema without middleware)
+// ⚠️ Avoid model overwrite errors in dev
 mongoose.models.User && delete mongoose.models.User;
 
 const User = mongoose.model<IUser>("User", UserSchema);

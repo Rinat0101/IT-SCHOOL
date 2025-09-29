@@ -72,26 +72,20 @@ export async function getUser(userId: string): Promise<User | null> {
 // ───────────────────────────────────────────────────────────────────────────────
 // Courses list split into purchased / nonPurchased (stubbed for now)
 // ───────────────────────────────────────────────────────────────────────────────
-export async function getGroupedCourses(_userId: string): Promise<CoursesGrouped> {
-  try {
-    const query = /* GraphQL */ `
-      query getAllCourses {
-        allCourses(first: 200, orderBy: _createdAt_ASC) {
-          id
-          name
-          slug
-          enabled
-          language
-        }
+export async function getAllCourses(): Promise<Course[]> {
+  const query = /* GraphQL */ `
+    query getAllCourses {
+      allCourses(first: 200, orderBy: _createdAt_ASC) {
+        id
+        name
+        slug
+        enabled
+        language
       }
-    `;
-    const { allCourses } = await client.request<{ allCourses: Course[] }>(query);
-    // Until DB logic is ready: treat all courses as “purchased”
-    return { purchased: allCourses, nonPurchased: [] };
-  } catch (error) {
-    console.error("❌ Failed to fetch courses from DatoCMS:", error);
-    return { purchased: [], nonPurchased: [] };
-  }
+    }
+  `;
+  const { allCourses } = await client.request<{ allCourses: Course[] }>(query);
+  return allCourses;
 }
 
 // ───────────────────────────────────────────────────────────────────────────────
@@ -684,6 +678,8 @@ export async function getLessonBySlug(
           isMandatory
           order
           weight
+          labDescription
+          
 
           content {
             __typename
@@ -805,6 +801,7 @@ export async function getLessonBySlug(
         weight: l.weight ?? null,
         content: (l.content ?? []) as DatoCmsLessonBlock[],
         extraResources: (l.extraResources ?? []) as ExtraResourceBlock[],
+        labDescription: l.labDescription ?? null,
       },
 
       // left sidebar: all lessons in the same day (sorted)

@@ -8,7 +8,11 @@ import DayView from "./DayView";
 import Link from "next/link";
 import { sortBy } from "@/app/utils/sort";
 
-const ModuleWrapper = () => {
+interface ModuleWrapperProps {
+  enrollment?: any; // enrollment from MongoDB for this user+course
+}
+
+const ModuleWrapper = ({ enrollment }: ModuleWrapperProps) => {
   const selectedWeekId = useCourseStore((s) => s.selectedWeekId);
   const setSelectedWeekId = useCourseStore((s) => s.setSelectedWeekId);
   const selectedCourse = useCourseStore((s) => s.selectedCourse);
@@ -30,7 +34,7 @@ const ModuleWrapper = () => {
 
   // Weeks sorted by their own order
   const weeksSorted: Week[] = useMemo(
-    () => sortBy(selectedModule?.weeks, (w) => (w as any).order), // Week has order
+    () => sortBy(selectedModule?.weeks, (w) => (w as any).order),
     [selectedModule]
   );
 
@@ -53,7 +57,7 @@ const ModuleWrapper = () => {
 
   // Days sorted by their own order
   const daysSorted: Day[] = useMemo(
-    () => sortBy(currentWeek?.days, (d) => (d as any).order), // Day has order
+    () => sortBy(currentWeek?.days, (d) => (d as any).order),
     [currentWeek]
   );
 
@@ -114,15 +118,18 @@ const ModuleWrapper = () => {
         </div>
 
         {/* Days grid */}
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-6" style={{ minHeight: "calc(100vh - 260px)" }}>
+        <div
+          className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-6"
+          style={{ minHeight: "calc(100vh - 260px)" }}
+        >
           {Array.from({ length: 3 }).map((_, idx) => {
             const day = daysSorted[idx];
 
-            // Sort lessons by (optional) order; fallback to original index
+            // Sort lessons by order or index
             const lessonsSorted: Lesson[] = (() => {
               const list = day?.lessons ?? [];
               return [...list]
-                .map((l, i) => ({ l, i, o: (l as any).order ?? i })) // (l as any).order if present
+                .map((l, i) => ({ l, i, o: (l as any).order ?? i }))
                 .sort((a, b) => a.o - b.o)
                 .map((x) => x.l);
             })();
@@ -142,6 +149,7 @@ const ModuleWrapper = () => {
                     moduleSlug={moduleSlug}
                     weekSlug={weekSlug}
                     daySlug={day.slug}
+                    enrollment={enrollment} // 🔹 pass enrollment down
                   />
                 ) : (
                   <div className="flex-1 border border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-400 text-sm italic">

@@ -1,4 +1,3 @@
-// models/Course.ts
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface ICourse extends Document {

@@ -25,7 +25,8 @@ const LessonCard: React.FC<LessonCardProps> = ({
 
   return (
     <div
-      className="relative flex items-center justify-between w-full rounded-lg px-4 py-3 bg-white"
+      className={`relative flex items-center justify-between w-full rounded-lg px-4 py-3 bg-white 
+        transition hover:shadow-md`}
       style={{ boxShadow: "0px 1px 2px rgba(145, 158, 171, 0.24)" }}
     >
       {/* full-height colored bar on the left */}
@@ -54,16 +55,18 @@ const LessonCard: React.FC<LessonCardProps> = ({
       {/* Right Side */}
       <div className="flex items-center gap-2">
         {isMandatory && (
-          <span className="bg-[#FFF7CD] text-[#7A4F01] text-xs font-semibold px-2 py-1 rounded-md">
+          <span className="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2 py-1 rounded-md">
             Mandatory
           </span>
         )}
 
         {/* Completion circle */}
         <div
-          className={`w-5 h-5 rounded-full border border-[#637381] opacity-70 flex items-center justify-center ${
-            isCompleted ? "bg-[#00AB55]" : ""
-          }`}
+          role="img"
+          aria-label={isCompleted ? "Lesson completed" : "Lesson not completed"}
+          className={`w-5 h-5 rounded-full border flex items-center justify-center
+            ${isCompleted ? "bg-green-600 border-green-600" : "border-gray-400"}
+          `}
         >
           {isCompleted && (
             <svg

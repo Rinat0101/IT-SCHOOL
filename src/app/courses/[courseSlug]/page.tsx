@@ -1,13 +1,25 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getCourse } from "@/lib/datocms";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import Breadcrumbs, { Crumb } from "@/app/path";
 import CourseProgress from "@/app/courseProgress";
 
 export default async function CoursePage({
   params,
 }: { params: { courseSlug: string } }) {
+  // ✅ Ensure user is logged in
+  const session = await getServerSession(authOptions);
+  if (!session) redirect("/login");
+
+  // ✅ Fetch the DatoCMS course
   const course = await getCourse(params.courseSlug);
   if (!course) return notFound();
+
+  // ✅ Find matching enrollment from session
+  const enrollment = session.user.enrollments?.find(
+    (e: any) => e.courseId?.datoCmsId === course.id
+  );
 
   const items: Crumb[] = [
     { label: "Courses", href: "/courses" },
@@ -21,7 +33,12 @@ export default async function CoursePage({
 
         <Breadcrumbs items={items} className="mb-6" />
 
-        <CourseProgress courseSlug={params.courseSlug} sections={course.sections} />
+        {/* 🔹 Pass enrollment into CourseProgress */}
+        <CourseProgress
+          courseSlug={params.courseSlug}
+          sections={course.sections}
+          enrollment={enrollment}
+        />
       </div>
     </div>
   );

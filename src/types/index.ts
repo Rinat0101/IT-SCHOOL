@@ -214,9 +214,11 @@ export type Lesson = {
   title: string;
   slug: string;
   lessonType: "Lesson" | "Lab" | "Assessment" | "Class Recording" | "Extra";
-  order: number;                 // required in your model
+  order: number;               
   isMandatory: boolean;
-  weight: number;                // required in your model
+  weight: number;     
+  labRepository?: string | null;
+  labDescription?: string | null;          
 
   content: DatoCmsLessonBlock[];
   extraResources?: ExtraResourceBlock[] | null;

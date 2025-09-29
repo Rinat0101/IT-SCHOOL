@@ -1,4 +1,3 @@
-// components/Navbar.tsx
 'use client';
 
 import Link from "next/link";
@@ -6,7 +5,12 @@ import Image from "next/image";
 import { useSession } from "next-auth/react";
 import ProfileMenu from "@/components/ProfileMenu";
 
-type SafeUser = { name?: string | null; email?: string | null; image?: string | null };
+type SafeUser = { 
+  name?: string | null; 
+  email?: string | null; 
+  image?: string | null; 
+  enrollments?: any[]; // 🔹 add this to catch enrollments
+};
 
 export default function Navbar() {
   const { data: session, status } = useSession();
@@ -14,7 +18,6 @@ export default function Navbar() {
   const user = (session?.user ?? {}) as SafeUser;
 
   return (
-    // fixed height + border, no bottom margin
     <header className="w-full bg-white border-b border-gray-100">
       <div className="mx-auto max-w-[1200px] px-6 md:px-8 h-16 flex items-center">
         <div className="shrink-0">
@@ -35,9 +38,18 @@ export default function Navbar() {
 
         <div className="shrink-0 flex items-center gap-4">
           {isAuthed ? (
-            <ProfileMenu user={{ name: user.name ?? null, email: user.email ?? null, image: user.image ?? null }} />
+            <ProfileMenu
+              user={{
+                name: user.name ?? null,
+                email: user.email ?? null,
+                image: user.image ?? null,
+              }}
+            />
           ) : (
-            <Link href="/api/auth/signin" className="text-sm font-semibold text-[#B923AE] hover:underline">
+            <Link 
+              href="/api/auth/signin" 
+              className="text-sm font-semibold text-[#B923AE] hover:underline"
+            >
               Sign in
             </Link>
           )}

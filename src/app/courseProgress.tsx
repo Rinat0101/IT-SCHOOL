@@ -6,18 +6,47 @@ import GoalsCard from "@/components/GoalsCard";
 import React from "react";
 import { useCourseStore } from "@/stores/useCourseStore";
 
+// Section shape
 type SectionLite = { id: string; title: string; slug: string };
+
+// Enrollment shape (simplified, expand later)
+type EnrollmentLite = {
+  _id: string;
+  courseId: { _id: string; datoCmsId: string; slug: string; name: string };
+  startDate: string;
+  endDate: string;
+  status: "active" | "completed" | "cancelled";
+  goals?: {
+    choices: string[];
+    location?: string;
+    deadline?: string;
+  };
+  labs?: {
+    lessonId: string;
+    repoLink: string;
+    submittedAt: string;
+  }[];
+};
 
 export default function CourseSectionCardsContainer({
   courseSlug,
   sections,
   courseName,
+  enrollment,
 }: {
   courseSlug: string;
   sections: SectionLite[];
   courseName?: string;
+  enrollment?: EnrollmentLite;
 }) {
   const { setSelectedSection } = useCourseStore();
+
+  // 🔹 Placeholder: compute completion per section
+  const getCompletionForSection = (sectionId: string): number => {
+    if (!enrollment) return 0;
+    // TODO: match labs/completed lessons with section lessons
+    return 0;
+  };
 
   return (
     <div className="w-full bg-white min-h-screen">
@@ -45,7 +74,7 @@ export default function CourseSectionCardsContainer({
               >
                 <CourseSectionCard
                   title={section.title}
-                  completionPercentage={50}
+                  completionPercentage={getCompletionForSection(section.id)}
                 />
               </Link>
             ))
@@ -55,9 +84,11 @@ export default function CourseSectionCardsContainer({
         </div>
 
         {/* Goals */}
-        {/* <div className="max-w-xl mx-auto my-10">
-          <GoalsCard />
-        </div> */}
+        {enrollment?.goals && (
+          <div className="max-w-xl mx-auto my-10">
+            <GoalsCard goals={enrollment.goals} />
+          </div>
+        )}
       </div>
     </div>
   );

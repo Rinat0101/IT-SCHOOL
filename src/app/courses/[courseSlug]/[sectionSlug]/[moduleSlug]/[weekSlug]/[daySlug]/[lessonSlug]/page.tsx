@@ -1,55 +1,60 @@
 // app/courses/[courseSlug]/[sectionSlug]/[moduleSlug]/[weekSlug]/[daySlug]/[lessonSlug]/page.tsx
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import Enrollment from "@/models/CourseEnrollment";
+import Course from "@/models/Course";   // ✅ import Course model
 import { getLessonBySlug } from "@/lib/datocms";
 import LessonPage from "./LessonPage";
 
-type RouteParams = {
-  courseSlug: string;
-  sectionSlug: string;
-  moduleSlug: string;
-  weekSlug: string;
-  daySlug: string;
-  lessonSlug: string;
-};
+export default async function Page({ params }) {
+  const session = await getServerSession(authOptions);
+  if (!session) redirect("/login");
 
-export default async function Page({ params }: { params: RouteParams }) {
-  const {
-    courseSlug: urlCourseSlug,
-    sectionSlug: urlSectionSlug,
-    moduleSlug,
-    weekSlug,
-    daySlug,
-    lessonSlug,
-  } = params;
+  const { lessonSlug, courseSlug, sectionSlug, moduleSlug, weekSlug, daySlug } = params;
 
-  // 1) Fetch everything for this lesson in one go
+  // 1) Fetch lesson from DatoCMS
   const data = await getLessonBySlug(lessonSlug);
   if (!data?.lesson || !data.day) return notFound();
 
-  const { lesson, day } = data;
+  console.log("Server data.courseId", data.courseId); // DatoCMS course ID
 
-  // 2) Ensure we have course/section labels and slugs
-  const finalCourseSlug  = data.courseSlug  ?? urlCourseSlug;
-  const finalCourseTitle = data.courseTitle ?? urlCourseSlug.replace(/-/g, " ");
-  const finalSectionSlug = data.sectionSlug ?? urlSectionSlug;
-  const finalSectionTitle= data.sectionTitle?? urlSectionSlug.replace(/-/g, " ");
+  // 2) Resolve Mongo course by datoCmsId
+  const courseDoc = await Course.findOne({ datoCmsId: data.courseId });
+  if (!courseDoc) {
+    console.warn("No matching Course found in Mongo for datoCmsId:", data.courseId);
+    redirect("/courses");
+  }
 
-  // 3) Build baseHref for the DaySidebar links (no trailing slash)
-  const baseHref = `/courses/${finalCourseSlug}/${finalSectionSlug}/${moduleSlug}/${weekSlug}/${daySlug}`;
+  // 3) Verify enrollment in Mongo
+  const enrollment = await Enrollment.findOne({
+    userId: session.user.id,
+    courseId: courseDoc._id, // ✅ match by ObjectId
+  });
 
-  // 4) Pass everything to the client page
+  console.log("Server enrollment result:", enrollment);
+
+  if (!enrollment) {
+    // Not enrolled → block
+    redirect("/courses");
+  }
+
+  // 4) Build baseHref
+  const baseHref = `/courses/${courseSlug}/${sectionSlug}/${moduleSlug}/${weekSlug}/${daySlug}`;
+
+  // 5) Render LessonPage
   return (
     <LessonPage
-      lesson={lesson}             // full content for LessonBlockRenderer
-      day={day}                   // all lessons for current day (for DaySidebar + NavButtons)
-      courseId={data.courseId ?? ""}
-
-      courseSlug={finalCourseSlug}
-      courseTitle={finalCourseTitle}
-      sectionSlug={finalSectionSlug}
-      sectionTitle={finalSectionTitle}
-
+      lesson={data.lesson}
+      day={data.day}
+      courseId={data.courseId}
+      courseSlug={courseSlug}
+      courseTitle={data.courseTitle}
+      sectionSlug={sectionSlug}
+      sectionTitle={data.sectionTitle}
       baseHref={baseHref}
+      enrollmentId={enrollment._id.toString()}
+      completedLessons={enrollment.completedLessons ?? []}
     />
   );
 }

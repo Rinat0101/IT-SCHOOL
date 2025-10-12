@@ -1,9 +1,6 @@
 import { create } from "zustand";
 import { Course, Section, Module, Lesson } from "@/types";
-import {
-  getGroupedCourses,
-  getModuleStructure,
-} from "@/lib/datocms";
+import { getAllCourses, getModuleStructure } from "@/lib/datocms";
 
 type CourseStore = {
   // Data
@@ -19,7 +16,7 @@ type CourseStore = {
   isLoading: boolean;
 
   // Fetch functions
-  fetchGroupedCourses: (userId: string) => Promise<void>;
+  fetchGroupedCourses: (userEnrollments?: any[]) => Promise<void>;
   fetchModuleStructure: (module: Partial<Module>) => Promise<void>;
 
   // Setters
@@ -48,22 +45,26 @@ export const useCourseStore = create<CourseStore>((set) => ({
   sectionProgress: {},
   isLoading: false,
 
-  // 🔁 Fetch purchased + non-purchased courses
-  fetchGroupedCourses: async (userId) => {
+  // 🔹 Fetch purchased + non-purchased courses
+  fetchGroupedCourses: async (userEnrollments = []) => {
     set({ isLoading: true });
     try {
-      const data = await getGroupedCourses(userId);
-      set({
-        purchasedCourses: data.purchased,
-        nonPurchasedCourses: data.nonPurchased,
-      });
+      const allCourses = await getAllCourses();
+
+      // If user has enrollments → split purchased / non-purchased
+      const purchasedIds = userEnrollments.map((e: any) => e.courseId?.datoCmsId);
+      const purchased = allCourses.filter((c) => purchasedIds.includes(c.id));
+      const nonPurchased = allCourses.filter((c) => !purchasedIds.includes(c.id));
+
+      set({ purchasedCourses: purchased, nonPurchasedCourses: nonPurchased });
     } catch (err) {
-      console.error("❌ Error fetching grouped courses:", err);
+      console.error("❌ Error fetching courses:", err);
     } finally {
       set({ isLoading: false });
     }
   },
 
+  // 🔹 Fetch module structure (weeks → days → lessons)
   fetchModuleStructure: async (module) => {
     console.log("🟣 fetchModuleStructure called with:", module);
     if (!module?.id) {
@@ -99,7 +100,7 @@ export const useCourseStore = create<CourseStore>((set) => ({
   setSelectedWeekId: (id) => set({ selectedWeekId: id }),
   setSelectedLesson: (lesson) => set({ selectedLesson: lesson }),
 
-  // 🔄 Reset store state
+  // 🔄 Reset all store state
   reset: () =>
     set({
       purchasedCourses: [],

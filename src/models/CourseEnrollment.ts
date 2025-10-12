@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
-
+import "@/models/Course";
 export interface IEnrollment extends Document {
   userId: mongoose.Types.ObjectId;   // reference to User
   courseId: mongoose.Types.ObjectId; // reference to Course

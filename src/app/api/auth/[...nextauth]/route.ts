@@ -2,6 +2,9 @@ import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import connectDB from "@/lib/mongoose";
 import User from "@/models/User";
+import bcrypt from "bcryptjs";
+
+const isMockMode = process.env.MOCK_DB === "true";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -15,13 +18,65 @@ export const authOptions: NextAuthOptions = {
         if (!credentials?.email || !credentials?.password) return null;
 
         try {
+          // ────────────────────────────────
+          // 🧪 MOCK MODE (no MongoDB)
+          // ────────────────────────────────
+          if (isMockMode) {
+            console.log("🧪 Mock auth active — fetching DatoCMS courses and skipping MongoDB");
+
+            // Fetch all courses from DatoCMS (so the mock user can see everything)
+            const res = await fetch("https://graphql.datocms.com/", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${process.env.DATOCMS_API_KEY}`,
+              },
+              body: JSON.stringify({
+                query: `
+                  query {
+                    allCourses {
+                      id
+                      name
+                      slug
+                    }
+                  }
+                `,
+              }),
+            });
+
+            const data = await res.json();
+            const courses = data?.data?.allCourses || [];
+
+            // Create "fake" enrollments
+            const enrollments = courses.map((course: any) => ({
+              courseId: {
+                datoCmsId: course.id,
+                name: course.name,
+                slug: course.slug,
+              },
+            }));
+
+            // Return mock user with access to everything
+            return {
+              id: "mock-user",
+              email: "methodologist@procoding.com",
+              name: "Methodologist Tester",
+              role: "student",
+              language: "en",
+              enrollments, // ✅ all courses visible
+            };
+          }
+
+          // ────────────────────────────────
+          // 🌐 REAL MODE (MongoDB enabled)
+          // ────────────────────────────────
           await connectDB();
 
-          // 🔹 populate enrollments with course info
+          // Find user by email
           const user = await User.findOne({ email: credentials.email })
             .populate({
               path: "enrollments",
-              populate: { path: "courseId" }, // fetch course data
+              populate: { path: "courseId" },
             });
 
           if (!user) return null;
@@ -44,6 +99,9 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
 
+  // ────────────────────────────────
+  // ⚙️ Callbacks
+  // ────────────────────────────────
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
@@ -59,6 +117,12 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role as "student" | "admin";
         session.user.enrollments = token.enrollments || [];
       }
+
+      // Add mock mode indicator
+      if (isMockMode) {
+        session.mockMode = true;
+      }
+
       return session;
     },
   },

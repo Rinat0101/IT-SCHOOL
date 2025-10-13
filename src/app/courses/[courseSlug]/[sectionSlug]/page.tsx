@@ -12,31 +12,28 @@ interface SectionPageProps {
 
 export default async function SectionPage({ params }: SectionPageProps) {
   const { courseSlug, sectionSlug } = params;
+  const session = await getServerSession(authOptions);
+  const isMockMode = process.env.MOCK_DB === "true";
 
-  // 1) Fetch deep section structure from DatoCMS
+  // 1️⃣ Fetch DatoCMS structure
   const data = await getSectionDeep(courseSlug, sectionSlug);
   if (!data) return notFound();
 
-  // 2) Get the current user session
-  const session = await getServerSession(authOptions);
-
-  // 3) Load enrollment for this user + course
+  // 2️⃣ Skip DB in mock mode
   let enrollment = null;
-  if (session?.user?.id) {
+  if (!isMockMode && session?.user?.id) {
     await connectDB();
-    enrollment = await Enrollment.findOne({
-      userId: session.user.id,
-    })
-      .populate("courseId") // include course info
+    enrollment = await Enrollment.findOne({ userId: session.user.id })
+      .populate("courseId")
       .lean();
   }
 
-  // 4) Render client component with enrollment
+  // 3️⃣ Always render page
   return (
     <SectionClientPage
       course={data.course}
       section={data.section}
-      enrollment={enrollment ? JSON.parse(JSON.stringify(enrollment)) : null}
+      enrollment={enrollment ? JSON.parse(JSON.stringify(enrollment)) : {}}
     />
   );
 }

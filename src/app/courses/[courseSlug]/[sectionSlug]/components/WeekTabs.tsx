@@ -1,12 +1,13 @@
 "use client";
 import React from "react";
 import { Week } from "@/types";
+import { cleanTitle } from "@/app/utils/cleanTitles";
 
 export interface WeekTabsProps {
   weeks: Week[];
   selectedWeekId: string | null;
   onSelectWeek: (id: string) => void;
-  completedLessons?: string[]; // from enrollment
+  completedLessons?: string[];
 }
 
 const WeekTabs: React.FC<WeekTabsProps> = ({
@@ -38,7 +39,7 @@ const WeekTabs: React.FC<WeekTabsProps> = ({
                   : "bg-gray-200 text-gray-800 hover:bg-gray-300"
               }`}
           >
-            {week.title}
+            {cleanTitle(week.title)}
             {completed && <span className="ml-2">✅</span>}
           </button>
         );

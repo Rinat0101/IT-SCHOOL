@@ -76,52 +76,53 @@ function parseQuizBody(type: "single" | "multi", body: string) {
 // Preprocess directives
 // ─────────────────────────────
 function preprocessDirectives(markdown: string): string {
-  // --- Block (Image + Text layout)
+  // --- Combine image + following paragraph into one flex block ---
   markdown = markdown.replace(
-    /:::block\s*(align:(left|right|center)\s*)?(w:\d+\s*)?([\s\S]*?):::/gi,
-    (_, _alignStr, alignSide, widthStr, inner) => {
-      const width = widthStr ? parseInt(widthStr.replace(/\D/g, ""), 10) : 45;
-      const align = alignSide || "left";
+    /!\[([^\]]*align:(left|right)[^\]]*)\]\(([^)]+)\)\s*\n+((?:[^\n]+\n?)+?)(?=\n{2,}|$)/gi,
+    (_, alt, align, src, text) => {
+      const { width } = parseAltWithOptions(alt);
       const flexDir = align === "right" ? "md:flex-row-reverse" : "md:flex-row";
+      const imgWidth = width ? `${width}%` : "40%";
 
-      const imgMatch = inner.match(/!\[([^\]]*)\]\(([^)]+)\)/);
-      const textPart = inner.replace(/!\[([^\]]*)\]\(([^)]+)\)/, "").trim();
-
-      if (!imgMatch) return inner;
-      const imgAlt = imgMatch[1];
-      const imgSrc = imgMatch[2];
-
+      // ⚙️ Use consistent scaling — remove Tailwind w-full, use explicit width instead
       return `
-        <div class="flex flex-col ${flexDir} items-center gap-6 my-8">
-          <div class="md:w-[${width}%] w-full text-${align}">
-            <img src="${imgSrc}" alt="${imgAlt}" class="rounded-md w-full h-auto" />
-          </div>
-          <div class="md:flex-1 w-full text-[15px] leading-7 text-[#1B2633]">
-            ${textPart}
-          </div>
-        </div>
-      `;
+<div class="flex flex-col ${flexDir} items-center gap-6 my-8">
+  <div class="flex-shrink-0 flex justify-center md:justify-start" style="width:${imgWidth};">
+    <img src="${src}" alt="" style="width:100%; height:auto;" />
+  </div>
+  <div class="md:flex-1 w-full text-[15px] leading-7 text-[#1B2633]">
+    ${text
+      .trim()
+      .replace(/\n+/g, "<br>")
+      .replace(/^([A-Z].*?)(\.|\!|\?)\s/, "<strong>$1</strong>$2 ")}
+  </div>
+</div>`;
     }
   );
 
   // --- Alert boxes ---
   markdown = markdown.replace(
-    /:::alert\s*(type:(success|info|warning|error))?\s*(title:"([^"]+)")?\s*\n([\s\S]*?)\n:::/gi,
-    (_, _typeStr, type, _titleStr, title, body) => {
+    /:::alert\s+(info|success|warning|danger)\s*\n([\s\S]*?)\n:::/gi,
+    (_, type, body) => {
       const map = {
         success: { bg: "#ECFDF5", text: "#065F46", border: "#6EE7B7", icon: "✅" },
         info: { bg: "#EFF6FF", text: "#1E3A8A", border: "#93C5FD", icon: "💡" },
         warning: { bg: "#FFFBEB", text: "#92400E", border: "#FACC15", icon: "⚠️" },
-        error: { bg: "#FEF2F2", text: "#991B1B", border: "#F87171", icon: "❌" },
+        danger: { bg: "#FEF2F2", text: "#991B1B", border: "#F87171", icon: "❌" },
       };
-      const preset = map[type] || map.info;
-      const titleHTML = title
-        ? `<div class="flex items-center gap-2 mb-2"><span class="text-lg">${preset.icon}</span><strong>${title}</strong></div>`
-        : `<div class="text-lg mb-2">${preset.icon}</div>`;
+
+      const preset = map[type.toLowerCase()] || map.info;
+      const lines = body.trim().split(/\r?\n/);
+      const firstLineIndex = lines.findIndex((l) => l.trim().length > 0);
+      if (firstLineIndex !== -1) {
+        lines[firstLineIndex] = `<strong>${lines[firstLineIndex].trim()}</strong>`;
+      }
+      const formattedBody = lines.join("<br>");
+
       return `
-<div class="rounded-xl border px-5 py-4 my-6" style="background-color:${preset.bg}; color:${preset.text}; border-color:${preset.border}">
-${titleHTML}
-<div class="text-[15px] leading-7 text-[#1B2633]">${body.trim()}</div>
+<div class="rounded-xl border px-5 py-4 my-4 text-[15px] leading-7"
+     style="background-color:${preset.bg}; color:${preset.text}; border-color:${preset.border}">
+  <div>${formattedBody}</div>
 </div>`;
     }
   );
@@ -132,17 +133,16 @@ ${titleHTML}
     (_, prefix: string, user: string, slug: string) => {
       const url = `https://codepen.io/${user}/pen/${slug}`;
       return `
-        <p class="codepen"
-           data-height="400"
-           data-default-tab="html,result"
-           data-slug-hash="${slug}"
-           data-user="${user}"
-           style="height:400px;display:flex;align-items:center;justify-content:center;border:1px solid #ccc;margin:1em 0;padding:1em;">
-          <span>See the Pen <a href="${url}">Code Example</a> by ${user}
-          (<a href="https://codepen.io/${user}">@${user}</a>)
-          on <a href="https://codepen.io">CodePen</a>.</span>
-        </p>
-      `;
+<p class="codepen"
+   data-height="400"
+   data-default-tab="html,result"
+   data-slug-hash="${slug}"
+   data-user="${user}"
+   style="height:400px;display:flex;align-items:center;justify-content:center;border:1px solid #ccc;margin:1em 0;padding:1em;">
+  <span>See the Pen <a href="${url}">Code Example</a> by ${user}
+  (<a href="https://codepen.io/${user}">@${user}</a>)
+  on <a href="https://codepen.io">CodePen</a>.</span>
+</p>`;
     }
   );
 
@@ -185,40 +185,42 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
         components={{
           // Images
           img: ({ node, ...props }) => {
-            const { caption, align, width, height } = parseAltWithOptions(props.alt);
+            const { align, width, height } = parseAltWithOptions(props.alt);
             const style: React.CSSProperties = {
-              width: width ? `${width}%` : "auto",
+              width: width ? (String(width).includes("%") ? width : `${width}%`) : "auto",
               height: height ? `${height}px` : "auto",
               maxWidth: "100%",
-              borderRadius: "0.5rem",
             };
 
-            const isInline = align.startsWith("inline-");
-            if (isInline) {
-              const flexDir = align === "inline-left" ? "row" : "row-reverse";
+            // --- Inline image ---
+            if (align?.startsWith("inline-")) {
               return (
-                <div
-                  className="flex flex-wrap items-center my-6 gap-4"
-                  style={{ flexDirection: flexDir }}
-                >
-                  <img {...props} style={style} />
-                  <div className="flex-1 text-[15px] leading-7 text-[#1B2633]" />
-                </div>
+                <img
+                  src={props.src || ""}
+                  alt=""
+                  style={{
+                    ...style,
+                    display: "inline-block",
+                    verticalAlign: "middle",
+                    marginLeft: align === "inline-right" ? "0.4em" : "0",
+                    marginRight: align === "inline-left" ? "0.4em" : "0",
+                  }}
+                />
               );
             }
 
+            // --- Centered block image ---
+            const justify =
+              align === "center"
+                ? "justify-center"
+                : align === "right"
+                  ? "justify-end"
+                  : "justify-start";
+
             return (
-              <figure
-                className="my-6"
-                style={{
-                  textAlign: align === "center" ? "center" : align === "right" ? "right" : "left",
-                }}
-              >
-                <img {...props} style={style} />
-                {caption && (
-                  <figcaption className="text-sm text-gray-500 mt-1">{caption}</figcaption>
-                )}
-              </figure>
+              <div className={`flex ${justify} my-6`}>
+                <img src={props.src || ""} alt="" style={{ ...style, display: "block" }} />
+              </div>
             );
           },
 
@@ -243,7 +245,8 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
           h4: (props) => (
             <h4 {...props} className="text-lg font-semibold text-[#212B36] mt-4 mb-2" />
           ),
-          // Paragraphs
+
+          // Text elements
           p: (props) => <p {...props} className="mb-4 text-[15px] leading-7 text-[#1B2633]" />,
           ul: (props) => (
             <ul
@@ -285,15 +288,14 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
             <td {...props} className="px-4 py-2 border border-gray-200 align-top" />
           ),
 
+          // Code blocks
           code({ inline, className, children, ...rest }: any) {
             const raw = String(children ?? "").trim();
             const match = /language-(\w+)/.exec(className || "");
-
-            // Detect if this is actually inline but came as a block
             const looksInline =
               !inline && !match && !raw.includes("\n") && raw.length > 0 && raw.length <= 80;
 
-            // ✅ Inline monospace (short snippets)
+            // ✅ Inline monospace
             if (inline || looksInline) {
               return (
                 <code
@@ -301,7 +303,7 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
                   className="rounded-md px-1.5 py-0.5 bg-gray-100 text-gray-800 font-mono text-[0.9em]"
                   style={{
                     fontFamily:
-                      "'Fira Code', 'JetBrains Mono', 'Menlo', 'Consolas', 'Liberation Mono', 'Courier New', monospace",
+                      "'Fira Code', 'JetBrains Mono', 'Menlo', 'Consolas', 'Courier New', monospace",
                   }}
                 >
                   {raw}
@@ -327,7 +329,7 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
                     background: "#F8F9FA",
                     color: "#1B2633",
                     fontFamily:
-                      "'Fira Code', 'JetBrains Mono', 'Menlo', 'Consolas', 'Liberation Mono', 'Courier New', monospace",
+                      "'Fira Code', 'JetBrains Mono', 'Menlo', 'Consolas', 'Courier New', monospace",
                   }}
                   {...rest}
                 >
@@ -337,6 +339,7 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
             );
           },
 
+          // Quizzes
           "quiz-block": (props: any) => <QuizBlock {...props} />,
         }}
       >

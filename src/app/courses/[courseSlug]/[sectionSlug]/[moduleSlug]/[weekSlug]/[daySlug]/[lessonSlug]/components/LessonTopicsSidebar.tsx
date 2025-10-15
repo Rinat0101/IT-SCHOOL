@@ -2,6 +2,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { DatoCmsLessonBlock, ExtraResourceBlock } from "@/types";
 
 type Props = {
@@ -166,6 +168,23 @@ export default function LessonTopicsSidebar({
 
   if (sections.length === 0) return null;
 
+  // ---------- markdown inline renderer ----------
+  const renderMarkdown = (text: string, className?: string) => (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        code: ({ children }) => (
+          <code className="px-1 py-0.5 rounded-md bg-gray-100 text-gray-800 font-mono text-[0.9em]">
+            {children}
+          </code>
+        ),
+        p: ({ children }) => <>{children}</>,
+      }}
+    >
+      {text}
+    </ReactMarkdown>
+  );
+
   return (
     <aside className={`w-full max-w-xs ${className}`}>
       <h2 className="text-xs font-semibold tracking-[0.06em] text-[#202733] mb-3 uppercase">
@@ -199,7 +218,7 @@ export default function LessonTopicsSidebar({
                       : "text-[#6B778C] hover:text-[#202733] font-medium"
                   }`}
                 >
-                  {sec.title}
+                  {renderMarkdown(sec.title)}
                 </button>
               </div>
 
@@ -219,11 +238,11 @@ export default function LessonTopicsSidebar({
                           }}
                           className="text-[13px] leading-5 text-[#6B778C] hover:text-[#202733] underline-offset-2 hover:underline"
                         >
-                          {sub.label}
+                          {renderMarkdown(sub.label)}
                         </a>
                       ) : (
                         <span className="text-[13px] leading-5 text-[#6B778C]">
-                          {sub.label}
+                          {renderMarkdown(sub.label)}
                         </span>
                       )}
                     </li>

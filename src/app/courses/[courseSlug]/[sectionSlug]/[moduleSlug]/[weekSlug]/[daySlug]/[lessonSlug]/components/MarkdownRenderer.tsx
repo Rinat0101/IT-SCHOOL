@@ -7,6 +7,7 @@ import rehypeRaw from "rehype-raw";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { duotoneLight } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import QuizBlock from "@/components/QuizBlock";
+import HiddenTextBlock from "@/components/HiddenTextBlock";
 
 type Props = {
   content: string;
@@ -225,7 +226,17 @@ function preprocessDirectives(markdown: string): string {
       return `<quiz-block data-json="${encoded}"></quiz-block>`;
     }
   );
+  // --- Hidden text blocks (e.g. hint, answer, explanation) ---
+  markdown = markdown.replace(
+    /:::hidden\s*(type=(\w+))?\s*(color=(\w+))?\s*\n([\s\S]*?)\n:::/gi,
+    (_, _typeRaw, type, _colorRaw, color, text) => {
+      const title = type ? type.charAt(0).toUpperCase() + type.slice(1) : "Hint";
+      const safeText = encodeURIComponent(text.trim());
+      const safeColor = color || "green";
 
+      return `<hidden-text-block data-title="${title}" data-color="${safeColor}" data-text="${safeText}"></hidden-text-block>`;
+    }
+  );
   return markdown;
 }
 
@@ -432,6 +443,15 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
 
           // Quizzes
           "quiz-block": (props: any) => <QuizBlock {...props} />,
+
+          // Hidden text blocks (hints / answers / explanations)
+          "hidden-text-block": (props: any) => (
+            <HiddenTextBlock
+              title={props["data-title"]}
+              color={props["data-color"]}
+              text={decodeURIComponent(props["data-text"])}
+            />
+          ),
         }}
       >
         {processed}

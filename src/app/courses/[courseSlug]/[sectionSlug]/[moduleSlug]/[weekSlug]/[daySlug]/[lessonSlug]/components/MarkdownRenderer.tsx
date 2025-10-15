@@ -46,28 +46,47 @@ function parseAltWithOptions(rawAlt?: string) {
 // ─────────────────────────────
 function parseQuizBody(type: "single" | "multi", body: string) {
   const lines = body.split(/\r?\n/);
-  let question = "";
-  let explanation = "";
-  const options: { text: string; correct: boolean }[] = [];
+  let questionLines: string[] = [];
+  let optionLines: string[] = [];
+  let explanationLines: string[] = [];
 
-  for (const raw of lines) {
-    const line = raw.trim();
-    if (!line) continue;
+  let section: "question" | "options" | "explanation" = "question";
 
-    const m = /^-\s*\[(x|\s)\]\s*(.+)$/i.exec(line);
-    if (m) {
-      options.push({ correct: m[1].toLowerCase() === "x", text: m[2].trim() });
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Detect explanation start
+    if (/^\*\*Explanation:\*\*/i.test(trimmed)) {
+      section = "explanation";
+      explanationLines.push(trimmed.replace(/^\*\*Explanation:\*\*\s*/i, ""));
       continue;
     }
 
-    const exp = /^\*\*Explanation:\*\*\s*(.+)$/i.exec(line);
-    if (exp) {
-      explanation = exp[1].trim();
-      continue;
+    // Detect options
+    if (/^-\s*\[(x|\s)\]/i.test(trimmed)) {
+      section = "options";
     }
 
-    if (!question) question = line.replace(/^\*\*(.+)\*\*$/, "$1");
+    // Push into the right section
+    if (section === "question") questionLines.push(line);
+    else if (section === "options") optionLines.push(line);
+    else if (section === "explanation") explanationLines.push(line);
   }
+
+  // ✅ Join question lines — keep all markdown (including code fences)
+  const question = questionLines.join("\n").trim();
+
+  // ✅ Extract options cleanly
+  const options = optionLines
+    .map((line) => {
+      const m = /^-\s*\[(x|\s)\]\s*(.+)$/i.exec(line.trim());
+      if (!m) return null;
+      return { correct: m[1].toLowerCase() === "x", text: m[2].trim() };
+    })
+    .filter(Boolean) as { text: string; correct: boolean }[];
+
+  // ✅ Explanation remains raw markdown
+  const explanation = explanationLines.join("\n").trim();
 
   return { type, question, options, explanation };
 }
@@ -100,7 +119,8 @@ function preprocessDirectives(markdown: string): string {
     }
   );
 
-  // --- Alert boxes ---
+  // --- Alert boxes (inline + block code support) ---
+  // --- Alert boxes (inline + block code support) ---
   markdown = markdown.replace(
     /:::alert\s+(info|success|warning|danger)\s*\n([\s\S]*?)\n:::/gi,
     (_, type, body) => {
@@ -112,17 +132,53 @@ function preprocessDirectives(markdown: string): string {
       };
 
       const preset = map[type.toLowerCase()] || map.info;
+
       const lines = body.trim().split(/\r?\n/);
-      const firstLineIndex = lines.findIndex((l) => l.trim().length > 0);
-      if (firstLineIndex !== -1) {
-        lines[firstLineIndex] = `<strong>${lines[firstLineIndex].trim()}</strong>`;
+      const firstNonEmptyIndex = lines.findIndex((l) => l.trim().length > 0);
+
+      let title = "";
+      let rest = "";
+
+      // ✅ If first line looks like a title (bold or starts with **Something**)
+      if (firstNonEmptyIndex !== -1 && /^\*\*.+\*\*/.test(lines[firstNonEmptyIndex].trim())) {
+        title = lines[firstNonEmptyIndex].trim();
+        rest = lines
+          .slice(firstNonEmptyIndex + 1)
+          .join("\n")
+          .trim();
+      } else {
+        // No title — treat all lines as body
+        rest = lines.join("\n").trim();
       }
-      const formattedBody = lines.join("<br>");
+
+      const titleWithInlineCode = title
+        ? title.replace(
+            /`([^`]+)`/g,
+            '<code class="px-1 py-0.5 bg-gray-100 text-gray-800 font-mono rounded-md text-[0.9em]">$1</code>'
+          )
+        : "";
+
+      const bodyWithBlocks = rest
+        .replace(/```(\w+)?\n([\s\S]*?)```/g, (_m, lang, code) => {
+          const escaped = code.replace(
+            /[<>&]/g,
+            (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[c]!
+          );
+          return `
+        <pre class="my-3 p-3 text-[0.9rem] leading-6 font-mono text-[#1B2633] rounded-md border border-gray-200 bg-transparent">
+          <code class="language-${lang || "text"}">${escaped}</code>
+        </pre>`;
+        })
+        .replace(
+          /`([^`]+)`/g,
+          '<code class="px-1 py-0.5 bg-gray-100 text-gray-800 font-mono rounded-md text-[0.9em]">$1</code>'
+        );
 
       return `
 <div class="rounded-xl border px-5 py-4 my-4 text-[15px] leading-7"
      style="background-color:${preset.bg}; color:${preset.text}; border-color:${preset.border}">
-  <div>${formattedBody}</div>
+  ${titleWithInlineCode ? `<div class="font-semibold mb-2">${titleWithInlineCode}</div>` : ""}
+  <div>${bodyWithBlocks}</div>
 </div>`;
     }
   );
@@ -151,19 +207,22 @@ function preprocessDirectives(markdown: string): string {
     /:::quiz\s+(single|multi)\s*([\s\S]*?):::/gi,
     (_, t: string, body: string) => {
       const parsed = parseQuizBody(t.toLowerCase() as "single" | "multi", body);
-      const json = encodeURIComponent(
-        JSON.stringify({
-          type: parsed.type,
-          question: parsed.question,
-          options: parsed.options.map((o, idx) => ({
-            id: `o${idx}`,
-            text: o.text,
-            correct: o.correct,
-          })),
-          explanation: parsed.explanation || "",
-        })
-      );
-      return `<quiz-block data-json="${json}"></quiz-block>`;
+
+      const json = JSON.stringify({
+        type: parsed.type,
+        question: parsed.question,
+        options: parsed.options.map((o, idx) => ({
+          id: `o${idx}`,
+          text: o.text,
+          correct: o.correct,
+        })),
+        explanation: parsed.explanation || "",
+      });
+
+      // ✅ Encode JSON to base64 (safe for HTML, reversible)
+      const encoded = btoa(unescape(encodeURIComponent(json)));
+
+      return `<quiz-block data-json="${encoded}"></quiz-block>`;
     }
   );
 
@@ -235,17 +294,51 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
           ),
 
           // Headings
-          h1: (props) => <h1 {...props} className="text-3xl font-bold text-[#212B36] mt-6 mb-4" />,
-          h2: (props) => (
-            <h2 {...props} className="text-2xl font-semibold text-[#212B36] mt-6 mb-3" />
+          // Headings (with inline code styling)
+          h1: ({ children, ...rest }) => (
+            <h1
+              {...rest}
+              className="text-3xl font-bold text-[#212B36] mt-6 mb-4
+               [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded-md
+               [&>code]:bg-gray-100 [&>code]:text-gray-800
+               [&>code]:font-mono [&>code]:text-[0.9em]"
+            >
+              {children}
+            </h1>
           ),
-          h3: (props) => (
-            <h3 {...props} className="text-xl font-semibold text-[#212B36] mt-5 mb-2" />
+          h2: ({ children, ...rest }) => (
+            <h2
+              {...rest}
+              className="text-2xl font-semibold text-[#212B36] mt-6 mb-3
+               [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded-md
+               [&>code]:bg-gray-100 [&>code]:text-gray-800
+               [&>code]:font-mono [&>code]:text-[0.9em]"
+            >
+              {children}
+            </h2>
           ),
-          h4: (props) => (
-            <h4 {...props} className="text-lg font-semibold text-[#212B36] mt-4 mb-2" />
+          h3: ({ children, ...rest }) => (
+            <h3
+              {...rest}
+              className="text-xl font-semibold text-[#212B36] mt-5 mb-2
+               [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded-md
+               [&>code]:bg-gray-100 [&>code]:text-gray-800
+               [&>code]:font-mono [&>code]:text-[0.9em]"
+            >
+              {children}
+            </h3>
           ),
-
+          h4: ({ children, ...rest }) => (
+            <h4
+              {...rest}
+              className="text-lg font-semibold text-[#212B36] mt-4 mb-2
+               [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded-md
+               [&>code]:bg-gray-100 [&>code]:text-gray-800
+               [&>code]:font-mono [&>code]:text-[0.9em]"
+            >
+              {children}
+            </h4>
+          ),
           // Text elements
           p: (props) => <p {...props} className="mb-4 text-[15px] leading-7 text-[#1B2633]" />,
           ul: (props) => (
@@ -292,11 +385,9 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
           code({ inline, className, children, ...rest }: any) {
             const raw = String(children ?? "").trim();
             const match = /language-(\w+)/.exec(className || "");
-            const looksInline =
-              !inline && !match && !raw.includes("\n") && raw.length > 0 && raw.length <= 80;
 
-            // ✅ Inline monospace
-            if (inline || looksInline) {
+            // ✅ If it’s inline or short (<80 chars, no newlines) → render as inline code
+            if (inline || (!match && !raw.includes("\n") && raw.length < 80)) {
               return (
                 <code
                   {...rest}
@@ -311,7 +402,7 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
               );
             }
 
-            // 🔹 Multiline fenced code block
+            // ✅ Otherwise, render fenced / multiline blocks
             return (
               <div className="my-4 overflow-auto rounded-lg bg-gray-100 border border-gray-200">
                 <SyntaxHighlighter

@@ -120,69 +120,82 @@ function preprocessDirectives(markdown: string): string {
     }
   );
 
-  // --- Alert boxes (inline + block code support) ---
-  // --- Alert boxes (inline + block code support) ---
-  markdown = markdown.replace(
-    /:::alert\s+(info|success|warning|danger)\s*\n([\s\S]*?)\n:::/gi,
-    (_, type, body) => {
-      const map = {
-        success: { bg: "#ECFDF5", text: "#065F46", border: "#6EE7B7", icon: "✅" },
-        info: { bg: "#EFF6FF", text: "#1E3A8A", border: "#93C5FD", icon: "💡" },
-        warning: { bg: "#FFFBEB", text: "#92400E", border: "#FACC15", icon: "⚠️" },
-        danger: { bg: "#FEF2F2", text: "#991B1B", border: "#F87171", icon: "❌" },
-      };
+// --- Alert boxes (inline + block code support) ---
+markdown = markdown.replace(
+  /:::alert\s+(info|success|warning|danger)\s*\n([\s\S]*?)\n:::/gi,
+  (_, type, body) => {
+    const map = {
+      success: { bg: "#ECFDF5", text: "#065F46", border: "#6EE7B7" },
+      info: { bg: "#EFF6FF", text: "#1E3A8A", border: "#93C5FD" },
+      warning: { bg: "#FFFBEB", text: "#92400E", border: "#FACC15" },
+      danger: { bg: "#FEF2F2", text: "#991B1B", border: "#F87171" },
+    };
 
-      const preset = map[type.toLowerCase()] || map.info;
+    const preset = map[type.toLowerCase()] || map.info;
 
-      const lines = body.trim().split(/\r?\n/);
-      const firstNonEmptyIndex = lines.findIndex((l) => l.trim().length > 0);
+    const lines = body.trim().split(/\r?\n/);
+    const firstNonEmptyIndex = lines.findIndex((l) => l.trim().length > 0);
 
-      let title = "";
-      let rest = "";
+    let title = "";
+    let rest = "";
 
-      // ✅ If first line looks like a title (bold or starts with **Something**)
-      if (firstNonEmptyIndex !== -1 && /^\*\*.+\*\*/.test(lines[firstNonEmptyIndex].trim())) {
-        title = lines[firstNonEmptyIndex].trim();
-        rest = lines
-          .slice(firstNonEmptyIndex + 1)
-          .join("\n")
-          .trim();
+    // Detect bold title
+    if (firstNonEmptyIndex !== -1) {
+      const firstLine = lines[firstNonEmptyIndex].trim();
+      const boldMatch = /^\*\*(.+?)\*\*/.exec(firstLine);
+      if (boldMatch) {
+        title = boldMatch[1].trim();
+        rest = lines.slice(firstNonEmptyIndex + 1).join("\n").trim();
       } else {
-        // No title — treat all lines as body
         rest = lines.join("\n").trim();
       }
+    }
 
-      const titleWithInlineCode = title
-        ? title.replace(
+    const titleWithInlineCode = title
+      ? `<div class="font-semibold mb-2" style="color:${preset.text}">
+          ${title.replace(
             /`([^`]+)`/g,
             '<code class="px-1 py-0.5 bg-gray-100 text-gray-800 font-mono rounded-md text-[0.9em]">$1</code>'
-          )
-        : "";
+          )}
+        </div>`
+      : "";
 
-      const bodyWithBlocks = rest
-        .replace(/```(\w+)?\n([\s\S]*?)```/g, (_m, lang, code) => {
-          const escaped = code.replace(
-            /[<>&]/g,
-            (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[c]!
-          );
+    // ✅ Properly separate text vs code — keeps color for text, syntax for code
+    const bodyWithBlocks = rest
+      .split(/(```[\s\S]*?```)/g)
+      .map((segment) => {
+        if (/^```/.test(segment)) {
+          const match = /^```(\w+)?\n([\s\S]*?)```$/.exec(segment);
+          if (!match) return segment;
+          const lang = match[1] || "text";
+          const code = match[2].trim();
           return `
-        <pre class="my-3 p-3 text-[0.9rem] leading-6 font-mono text-[#1B2633] rounded-md border border-gray-200 bg-transparent">
-          <code class="language-${lang || "text"}">${escaped}</code>
-        </pre>`;
-        })
-        .replace(
-          /`([^`]+)`/g,
-          '<code class="px-1 py-0.5 bg-gray-100 text-gray-800 font-mono rounded-md text-[0.9em]">$1</code>'
-        );
-
-      return `
-<div class="rounded-xl border px-5 py-4 my-4 text-[15px] leading-7"
-     style="background-color:${preset.bg}; color:${preset.text}; border-color:${preset.border}">
-  ${titleWithInlineCode ? `<div class="font-semibold mb-2">${titleWithInlineCode}</div>` : ""}
-  <div>${bodyWithBlocks}</div>
+<div>
+  <pre class="text-[0.9rem] leading-6 font-mono overflow-auto">
+    <code class="language-${lang}">${code}</code>
+  </pre>
 </div>`;
-    }
-  );
+        } else {
+          return `<div class="alert-text" style="color:${preset.text}">
+            ${segment
+              .replace(
+                /`([^`]+)`/g,
+                '<code class="px-1 py-0.5 bg-gray-100 text-gray-800 font-mono rounded-md text-[0.9em]">$1</code>'
+              )
+              .trim()}
+          </div>`;
+        }
+      })
+      .join("");
+
+    return `
+<div class="rounded-xl border px-5 py-4 my-4 text-[15px] leading-7"
+     style="background-color:${preset.bg}; border-color:${preset.border}">
+  ${titleWithInlineCode}
+  ${bodyWithBlocks}
+</div>`;
+  }
+);
 
   // --- CodePen embeds ---
   markdown = markdown.replace(

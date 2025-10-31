@@ -29,7 +29,6 @@ export default function DayView({
   daySlug,
   completedLessons = [],
 }: DayViewProps) {
-  console.log({ courseSlug, sectionSlug, moduleSlug, weekSlug, daySlug, lessons });
 
   return (
     <section className={`flex flex-col h-full bg-[#F9FAFB] p-4 ${className || ""}`}>

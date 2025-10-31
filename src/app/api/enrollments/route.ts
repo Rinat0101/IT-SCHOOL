@@ -37,11 +37,12 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
   await connectDB();
-  try {
-    const enrollments = await Enrollment.find().populate("userId courseId");
-    return NextResponse.json(enrollments);
-  } catch (err) {
-    console.error("❌ Error fetching enrollments:", err);
-    return NextResponse.json({ error: "Failed to fetch enrollments" }, { status: 500 });
-  }
+  const users = await User.find()
+    .populate({
+      path: "enrollments",
+      populate: { path: "courseId", select: "name" },
+    })
+    .select("-password -__v");
+
+  return NextResponse.json(users);
 }

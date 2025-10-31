@@ -1,68 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
+import mongoose from "mongoose";
 import connectDB from "@/lib/mongoose";
 import UserProgress from "@/models/UserProgress";
+import User from "@/models/User";
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const userEmail = searchParams.get("userEmail");
-  const courseId = searchParams.get("courseId");
-
-  if (!userEmail || !courseId) {
-    return NextResponse.json(
-      { error: "Missing userEmail or courseId" },
-      { status: 400 }
-    );
-  }
-
+export async function PATCH(req: NextRequest) {
   try {
+    const { userId, courseId, lessonId, markAsCompleted } = await req.json();
+
+    if (!userId || !courseId || !lessonId) {
+      return NextResponse.json({ error: "Missing required data" }, { status: 400 });
+    }
+
     await connectDB();
 
-    const progress = await UserProgress.findOne({ userEmail, courseId });
+    // ✅ Convert IDs properly
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+    const courseObjectId = new mongoose.Types.ObjectId(courseId);
 
-    return NextResponse.json({
-      completedLessons: progress?.completedLessons || [],
-    });
-  } catch (error) {
-    console.error("Error fetching progress:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch user progress" },
-      { status: 500 }
-    );
-  }
-}
+    // ✅ Find or create progress
+    let progress = await UserProgress.findOne({ userId: userObjectId, courseId: courseObjectId });
+    if (!progress) {
+      progress = new UserProgress({ userId: userObjectId, courseId: courseObjectId, completedLessons: [] });
+    }
 
-export async function POST(req: NextRequest) {
-  const { userEmail, courseId, lessonId, markAsCompleted } = await req.json();
+    // ✅ Toggle completion
+    if (markAsCompleted) {
+      if (!progress.completedLessons.includes(lessonId)) {
+        progress.completedLessons.push(lessonId);
+      }
+    } else {
+      progress.completedLessons = progress.completedLessons.filter((id) => id !== lessonId);
+    }
 
-  if (!userEmail || !courseId || !lessonId || typeof markAsCompleted !== "boolean") {
-    return NextResponse.json(
-      { error: "Missing or invalid data" },
-      { status: 400 }
-    );
-  }
-
-  try {
-    await connectDB();
-
-    const update = markAsCompleted
-      ? { $addToSet: { completedLessons: lessonId } }
-      : { $pull: { completedLessons: lessonId } };
-
-    const progress = await UserProgress.findOneAndUpdate(
-      { userEmail, courseId },
-      {
-        ...update,
-        $set: { updatedAt: new Date() },
-      },
-      { upsert: true, new: true }
-    );
+    await progress.save();
 
     return NextResponse.json({ success: true, completedLessons: progress.completedLessons });
-  } catch (error) {
-    console.error("Error updating progress:", error);
-    return NextResponse.json(
-      { error: "Failed to update user progress" },
-      { status: 500 }
-    );
+  } catch (err) {
+    console.error("Error updating progress:", err);
+    return NextResponse.json({ error: "Failed to update progress" }, { status: 500 });
   }
 }

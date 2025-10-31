@@ -5,73 +5,54 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/mongoose";
 import User from "@/models/User";
 
+//✅ POST (create user)
 export async function POST(req: NextRequest) {
+  await connectDB();
+
   try {
-    const session = await getServerSession(authOptions);
+    const { name, lastName, email, password, role, language } = await req.json();
 
-    if (!session || session.user.role !== "admin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const {
-      name,
-      lastName,
-      email,
-      password,
-      role,
-      github,
-      linkedin,
-      personalWebsite,
-      profilePicture,
-    } = await req.json();
-
-    if (!name || !lastName || !email || !password) {
+    if (!name || !email || !password) {
       return NextResponse.json(
-        { error: "Missing required fields: name, lastName, email, password" },
+        { error: "Name, email, and password are required" },
         { status: 400 }
       );
     }
 
-    await connectDB();
-
-    const existing = await User.findOne({ email });
-    if (existing) {
-      return NextResponse.json({ error: "User already exists" }, { status: 409 });
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return NextResponse.json(
+        { error: "User with this email already exists" },
+        { status: 400 }
+      );
     }
 
-    // ✅ use pre-save hook to hash password
-    const user = new User({
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = await User.create({
       name,
-      lastName,
+      lastName: lastName || "",
       email,
-      password,
+      password: hashedPassword,
       role: role || "student",
-      github,
-      linkedin,
-      personalWebsite,
-      profilePicture,
+      language: language || "en",
     });
 
-    await user.save();
-
-    const safeUser = {
-      _id: user._id,
-      name: user.name,
-      lastName: user.lastName,
-      email: user.email,
-      role: user.role,
-      github: user.github,
-      linkedin: user.linkedin,
-      personalWebsite: user.personalWebsite,
-      profilePicture: user.profilePicture,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    };
-
-    return NextResponse.json({ success: true, user: safeUser }, { status: 201 });
+    return NextResponse.json(
+      {
+        success: true,
+        user: {
+          id: newUser._id,
+          name: newUser.name,
+          email: newUser.email,
+          role: newUser.role,
+        },
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("❌ Error creating user:", error);
-    return NextResponse.json({ error: "Failed to create user" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -84,15 +65,18 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (session.user.role === "admin") {
-      // Admin: return all users
-      const users = await User.find().select("-password -__v");
-      return NextResponse.json(users);
-    } else {
-      // Student: return only themselves
-      const user = await User.findOne({ email: session.user.email }).select("-password -__v");
-      return NextResponse.json(user);
-    }
+    const users = await User.find()
+      .populate({
+        path: "enrollments",
+        populate: {
+          path: "courseId",
+          model: "Course",
+          select: "name",
+        },
+      })
+      .select("-password -__v");
+
+    return NextResponse.json(users);
   } catch (error) {
     console.error("❌ Error fetching users:", error);
     return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });

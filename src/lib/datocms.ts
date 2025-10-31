@@ -20,12 +20,16 @@ const API_URL = "https://graphql.datocms.com/";
 
 const client = new GraphQLClient(API_URL, {
   headers: { authorization: `Bearer ${API_TOKEN}` },
+  fetch: (url, options = {}) => {
+    return fetch(url, {
+      ...options,
+      cache: "no-cache",
+    });
+  },
 });
 
 // Small helper: non-mutating sort by `order` (undefined/null => last)
-function sortByOrder<T extends { order?: number | null }>(
-  arr: ReadonlyArray<T> | T[] = []
-): T[] {
+function sortByOrder<T extends { order?: number | null }>(arr: ReadonlyArray<T> | T[] = []): T[] {
   return [...arr].sort((a, b) => {
     const ao = a.order ?? Number.MAX_SAFE_INTEGER;
     const bo = b.order ?? Number.MAX_SAFE_INTEGER;
@@ -47,7 +51,9 @@ export async function getUser(userId: string): Promise<User | null> {
           email
           password
           language
-          profile_picture { url }
+          profile_picture {
+            url
+          }
           github
           linkedin
           personal_website
@@ -81,6 +87,10 @@ export async function getAllCourses(): Promise<Course[]> {
         slug
         enabled
         language
+        covermage {
+          url
+        }
+        url
       }
     }
   `;
@@ -91,15 +101,13 @@ export async function getAllCourses(): Promise<Course[]> {
 // ───────────────────────────────────────────────────────────────────────────────
 // Full course (deep) — includes sections/modules/weeks/days/lessons
 // ───────────────────────────────────────────────────────────────────────────────
-// datocms.ts
 export async function getCourse(slug: string): Promise<Course | null> {
-  // helper: non-mutating sort by `order` (undefined/null => last)
   const sortByOrder = <T extends { order?: number | null }>(arr: T[] = []) =>
     [...arr].sort(
       (a, b) => (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER)
     );
 
-  // 1) Get the course by slug (id is needed to filter sections)
+  // 1️⃣ Get course by slug
   const qCourse = /* GraphQL */ `
     query CourseBySlug($slug: String!) {
       course(filter: { slug: { eq: $slug } }) {
@@ -112,19 +120,16 @@ export async function getCourse(slug: string): Promise<Course | null> {
     }
   `;
   const rCourse = await client.request<{
-    course: Pick<Course, "id" | "name" | "slug" | "enabled" | "language"> | null;
+    course: { id: string; name: string; slug: string; enabled: boolean; language: string } | null;
   }>(qCourse, { slug });
 
   const base = rCourse.course;
   if (!base) return null;
 
-  // 2) Fetch sections linked to this course (filter by course id, not slug)
+  // 2️⃣ Fetch all sections linked to this course
   const qSections = /* GraphQL */ `
     query SectionsByCourse($courseId: ItemId) {
-      allSections(
-        filter: { course: { eq: $courseId } }
-        orderBy: order_ASC
-      ) {
+      allSections(filter: { course: { eq: $courseId } }, orderBy: order_ASC) {
         id
         title
         slug
@@ -132,42 +137,144 @@ export async function getCourse(slug: string): Promise<Course | null> {
       }
     }
   `;
-  const rSections = await client.request<{ allSections: Section[] }>(qSections, {
+  const rSections = await client.request<{ allSections: any[] }>(qSections, {
     courseId: base.id,
   });
-
   const sectionsSorted = sortByOrder(rSections.allSections);
 
-  // 3) Assemble a shallow Course object
-  // NOTE: Section type in your code expects `modules` and `parentCourse`.
-  // We provide empty modules and a minimal parentCourse to satisfy TS.
-  const shallowCourse: Course = {
+  // 3️⃣ Fetch all modules linked to those sections
+  const sectionIds = sectionsSorted.map((s) => s.id);
+  const qModules = /* GraphQL */ `
+    query ModulesBySections($sectionIds: [ItemId]) {
+      allModules(filter: { section: { in: $sectionIds } }) {
+        id
+        title
+        slug
+        order
+        section {
+          id
+        }
+      }
+    }
+  `;
+  const rModules = await client.request<{ allModules: any[] }>(qModules, { sectionIds });
+  const modulesBySection: Record<string, any[]> = {};
+  for (const m of rModules.allModules) {
+    const sid = m.section?.id;
+    if (!sid) continue;
+    if (!modulesBySection[sid]) modulesBySection[sid] = [];
+    modulesBySection[sid].push(m);
+  }
+
+  // 4️⃣ Fetch all weeks linked to modules
+  const moduleIds = rModules.allModules.map((m) => m.id);
+  const qWeeks = /* GraphQL */ `
+    query WeeksByModules($moduleIds: [ItemId]) {
+      allWeeks(filter: { module: { in: $moduleIds } }) {
+        id
+        title
+        slug
+        order
+        module {
+          id
+        }
+      }
+    }
+  `;
+  const rWeeks = await client.request<{ allWeeks: any[] }>(qWeeks, { moduleIds });
+  const weeksByModule: Record<string, any[]> = {};
+  for (const w of rWeeks.allWeeks) {
+    const mid = w.module?.id;
+    if (!mid) continue;
+    if (!weeksByModule[mid]) weeksByModule[mid] = [];
+    weeksByModule[mid].push(w);
+  }
+
+  // 5️⃣ Fetch all days linked to weeks
+  const weekIds = rWeeks.allWeeks.map((w) => w.id);
+  const qDays = /* GraphQL */ `
+    query DaysByWeeks($weekIds: [ItemId]) {
+      allDays(filter: { week: { in: $weekIds } }) {
+        id
+        title
+        slug
+        order
+        week {
+          id
+        }
+      }
+    }
+  `;
+  const rDays = await client.request<{ allDays: any[] }>(qDays, { weekIds });
+  const daysByWeek: Record<string, any[]> = {};
+  for (const d of rDays.allDays) {
+    const wid = d.week?.id;
+    if (!wid) continue;
+    if (!daysByWeek[wid]) daysByWeek[wid] = [];
+    daysByWeek[wid].push(d);
+  }
+
+  // 6️⃣ Fetch all lessons linked to days
+  const dayIds = rDays.allDays.map((d) => d.id);
+  const qLessons = /* GraphQL */ `
+    query LessonsByDays($dayIds: [ItemId]) {
+      allLessons(filter: { day: { in: $dayIds } }) {
+        id
+        title
+        slug
+        lessonType
+        isMandatory
+        day {
+          id
+        }
+      }
+    }
+  `;
+  const rLessons = await client.request<{ allLessons: any[] }>(qLessons, { dayIds });
+  const lessonsByDay: Record<string, any[]> = {};
+  for (const l of rLessons.allLessons) {
+    const did = l.day?.id;
+    if (!did) continue;
+    if (!lessonsByDay[did]) lessonsByDay[did] = [];
+    lessonsByDay[did].push(l);
+  }
+
+  // 7️⃣ Merge everything together
+  const sectionsWithModules = sectionsSorted.map((s) => ({
+    ...s,
+    modules: sortByOrder(modulesBySection[s.id] ?? []).map((m) => ({
+      ...m,
+      weeks: sortByOrder(weeksByModule[m.id] ?? []).map((w) => ({
+        ...w,
+        days: sortByOrder(daysByWeek[w.id] ?? []).map((d) => ({
+          ...d,
+          lessons: sortByOrder(lessonsByDay[d.id] ?? []),
+        })),
+      })),
+    })),
+  }));
+
+  // 8️⃣ Final Course object
+  const course: Course = {
     id: base.id,
     name: base.name,
     slug: base.slug,
     enabled: base.enabled,
     language: base.language,
-    // startDate / endDate removed from DatoCMS as discussed; keep placeholders if needed
-    sections: sectionsSorted.map((s) => ({
-      id: s.id,
-      title: s.title,
-      slug: s.slug,
-      order: s.order,
-      modules: [], // shallow
+    sections: sectionsWithModules.map((s) => ({
+      ...s,
       parentCourse: {
         id: base.id,
         name: base.name,
         slug: base.slug,
         enabled: base.enabled,
         language: base.language,
-        sections: [], // prevent circular explosion; not used in UI
-      } as unknown as Course,
+      } as Course,
     })),
   };
 
-  return shallowCourse;
+  return course;
 }
-
 // ───────────────────────────────────────────────────────────────────────────────
 // Sections by course slug (sorted by order)
 // ───────────────────────────────────────────────────────────────────────────────
@@ -180,7 +287,9 @@ export async function getSections(slug: string): Promise<Section[]> {
           title
           slug
           order
-          course { id }
+          course {
+            id
+          }
         }
       }
     `;
@@ -191,7 +300,6 @@ export async function getSections(slug: string): Promise<Section[]> {
     return [];
   }
 }
-
 
 // ───────────────────────────────────────────────────────────────────────────────
 // Section deep: modules → weeks → days → lessons (assembled in code)
@@ -248,14 +356,23 @@ export async function getSectionDeep(
           title
           slug
           order
-          course { id name slug }
+          course {
+            id
+            name
+            slug
+          }
         }
       }
     `;
-    const dSection = await client.request<{ section: {
-      id: string; title: string; slug: string; order?: number | null;
-      course: { id: string; name: string; slug: string } | null;
-    } | null }>(qSection, { sectionSlug });
+    const dSection = await client.request<{
+      section: {
+        id: string;
+        title: string;
+        slug: string;
+        order?: number | null;
+        course: { id: string; name: string; slug: string } | null;
+      } | null;
+    }>(qSection, { sectionSlug });
 
     const sec = dSection.section;
     if (!sec || !sec.course) return null;
@@ -268,9 +385,7 @@ export async function getSectionDeep(
     // 2) Modules for section
     const qModules = /* GraphQL */ `
       query ModulesBySection($sectionId: ItemId!) {
-        allModules(
-          filter: { section: { eq: $sectionId } }
-        ) {
+        allModules(filter: { section: { eq: $sectionId } }) {
           id
           title
           slug
@@ -278,9 +393,14 @@ export async function getSectionDeep(
         }
       }
     `;
-    const dModules = await client.request<{ allModules: {
-      id: string; title: string; slug: string; order?: number | null;
-    }[] }>(qModules, { sectionId });
+    const dModules = await client.request<{
+      allModules: {
+        id: string;
+        title: string;
+        slug: string;
+        order?: number | null;
+      }[];
+    }>(qModules, { sectionId });
 
     const modules = sortByOrder(dModules.allModules);
 
@@ -300,65 +420,100 @@ export async function getSectionDeep(
     }
 
     // 3) Weeks for all modules
-    const moduleIds = modules.map(m => m.id);
+    const moduleIds = modules.map((m) => m.id);
     const qWeeks = /* GraphQL */ `
       query WeeksByModules($moduleIds: [ItemId]) {
-        allWeeks(
-          filter: { module: { in: $moduleIds } }
-        ) {
+        allWeeks(filter: { module: { in: $moduleIds } }) {
           id
           title
           slug
           order
-          module { id }
+          module {
+            id
+          }
         }
       }
     `;
-    const dWeeks = await client.request<{ allWeeks: {
-      id: string; title: string; slug: string; order?: number | null; module: { id: string };
-    }[] }>(qWeeks, { moduleIds });
+    const dWeeks = await client.request<{
+      allWeeks: {
+        id: string;
+        title: string;
+        slug: string;
+        order?: number | null;
+        module: { id: string };
+      }[];
+    }>(qWeeks, { moduleIds });
 
     // 4) Days for all weeks
-    const weeksByModule: Record<string, {
-      id: string; title: string; slug: string; order: number | null; moduleId: string;
-    }[]> = {};
-    const weeks = sortByOrder(dWeeks.allWeeks).map(w => {
-      const wk = { id: w.id, title: w.title, slug: w.slug, order: w.order ?? null, moduleId: w.module.id };
+    const weeksByModule: Record<
+      string,
+      {
+        id: string;
+        title: string;
+        slug: string;
+        order: number | null;
+        moduleId: string;
+      }[]
+    > = {};
+    const weeks = sortByOrder(dWeeks.allWeeks).map((w) => {
+      const wk = {
+        id: w.id,
+        title: w.title,
+        slug: w.slug,
+        order: w.order ?? null,
+        moduleId: w.module.id,
+      };
       if (!weeksByModule[w.module.id]) weeksByModule[w.module.id] = [];
       weeksByModule[w.module.id].push(wk);
       return wk;
     });
 
-    const weekIds = weeks.map(w => w.id);
-    let days: { id: string; title: string; slug: string; order: number | null; weekId: string }[] = [];
+    const weekIds = weeks.map((w) => w.id);
+    let days: { id: string; title: string; slug: string; order: number | null; weekId: string }[] =
+      [];
     if (weekIds.length > 0) {
       const qDays = /* GraphQL */ `
         query DaysByWeeks($weekIds: [ItemId]) {
-          allDays(
-            filter: { week: { in: $weekIds } }
-          ) {
+          allDays(filter: { week: { in: $weekIds } }) {
             id
             title
             slug
             order
-            week { id }
+            week {
+              id
+            }
           }
         }
       `;
-      const dDays = await client.request<{ allDays: {
-        id: string; title: string; slug: string; order?: number | null; week: { id: string };
-      }[] }>(qDays, { weekIds });
+      const dDays = await client.request<{
+        allDays: {
+          id: string;
+          title: string;
+          slug: string;
+          order?: number | null;
+          week: { id: string };
+        }[];
+      }>(qDays, { weekIds });
 
-      days = sortByOrder(dDays.allDays).map(d => ({
-        id: d.id, title: d.title, slug: d.slug, order: d.order ?? null, weekId: d.week.id,
+      days = sortByOrder(dDays.allDays).map((d) => ({
+        id: d.id,
+        title: d.title,
+        slug: d.slug,
+        order: d.order ?? null,
+        weekId: d.week.id,
       }));
     }
 
     // 5) Lessons for all days
-    const dayIds = days.map(d => d.id);
+    const dayIds = days.map((d) => d.id);
     let lessons: {
-      id: string; title: string; slug: string;
-      lessonType: any; isMandatory: boolean; order: number | null; weight: number | null;
+      id: string;
+      title: string;
+      slug: string;
+      lessonType: any;
+      isMandatory: boolean;
+      order: number | null;
+      weight: number | null;
       dayId: string;
     }[] = [];
 
@@ -367,6 +522,7 @@ export async function getSectionDeep(
         query LessonsByDays($dayIds: [ItemId]) {
           allLessons(
             filter: { day: { in: $dayIds } }
+            first: 100 
           ) {
             id
             title
@@ -375,17 +531,26 @@ export async function getSectionDeep(
             isMandatory
             order
             weight
-            day { id }
+            day {
+              id
+            }
           }
         }
       `;
-      const dLessons = await client.request<{ allLessons: {
-        id: string; title: string; slug: string; lessonType: any;
-        isMandatory: boolean; order?: number | null; weight?: number | null;
-        day: { id: string };
-      }[] }>(qLessons, { dayIds });
+      const dLessons = await client.request<{
+        allLessons: {
+          id: string;
+          title: string;
+          slug: string;
+          lessonType: any;
+          isMandatory: boolean;
+          order?: number | null;
+          weight?: number | null;
+          day: { id: string };
+        }[];
+      }>(qLessons, { dayIds });
 
-      lessons = sortByOrder(dLessons.allLessons).map(l => ({
+      lessons = sortByOrder(dLessons.allLessons).map((l) => ({
         id: l.id,
         title: l.title,
         slug: l.slug,
@@ -396,11 +561,17 @@ export async function getSectionDeep(
         dayId: l.day.id,
       }));
     }
-
     // Build maps for quick grouping
-    const daysByWeek: Record<string, {
-      id: string; title: string; slug: string; order: number | null; lessons: any[];
-    }[]> = {};
+    const daysByWeek: Record<
+      string,
+      {
+        id: string;
+        title: string;
+        slug: string;
+        order: number | null;
+        lessons: any[];
+      }[]
+    > = {};
     const lessonsByDay: Record<string, any[]> = {};
 
     for (const l of lessons) {
@@ -429,8 +600,8 @@ export async function getSectionDeep(
     }
 
     // Stitch weeks into modules
-    const moduleBlocks = modules.map(m => {
-      const ws = sortByOrder(weeksByModule[m.id] ?? []).map(w => ({
+    const moduleBlocks = modules.map((m) => {
+      const ws = sortByOrder(weeksByModule[m.id] ?? []).map((w) => ({
         id: w.id,
         title: w.title,
         slug: w.slug,
@@ -483,7 +654,7 @@ export async function getModulesForTabs(
       query,
       { sectionId }
     );
-    return sortByOrder<(Module & { order?: number | null })>(data.allModules).map((m) => ({
+    return sortByOrder<Module & { order?: number | null }>(data.allModules).map((m) => ({
       id: m.id,
       title: m.title,
       slug: m.slug,
@@ -628,38 +799,32 @@ type GqlDayLessonsResp = {
   }[];
 };
 
-export async function getLessonBySlug(
-  lessonSlug: string
-): Promise<{
-  lesson:
-    | {
-        id: string;
-        title: string;
-        slug: string;
-        lessonType: Lesson["lessonType"];
-        isMandatory: boolean;
-        order?: number | null;
-        weight?: number | null;
-        content: DatoCmsLessonBlock[];
-        extraResources?: ExtraResourceBlock[];
-      }
-    | null;
-  day:
-    | {
-        id: string;
-        title: string;
-        slug: string;
-        order: number;
-        lessons: {
-          id: string;
-          title: string;
-          slug: string;
-          lessonType: Lesson["lessonType"];
-          isMandatory: boolean;
-          order?: number | null;
-        }[];
-      }
-    | null;
+export async function getLessonBySlug(lessonSlug: string): Promise<{
+  lesson: {
+    id: string;
+    title: string;
+    slug: string;
+    lessonType: Lesson["lessonType"];
+    isMandatory: boolean;
+    order?: number | null;
+    weight?: number | null;
+    content: DatoCmsLessonBlock[];
+    extraResources?: ExtraResourceBlock[];
+  } | null;
+  day: {
+    id: string;
+    title: string;
+    slug: string;
+    order: number;
+    lessons: {
+      id: string;
+      title: string;
+      slug: string;
+      lessonType: Lesson["lessonType"];
+      isMandatory: boolean;
+      order?: number | null;
+    }[];
+  } | null;
   courseId: string | null;
   courseTitle: string | null;
   courseSlug: string | null;
@@ -679,7 +844,6 @@ export async function getLessonBySlug(
           order
           weight
           labDescription
-          
 
           content {
             __typename
@@ -688,19 +852,31 @@ export async function getLessonBySlug(
               id
               title
               content
-              subsections { ... on SubsectionRecord { id title text } }
+              subsections {
+                ... on SubsectionRecord {
+                  id
+                  title
+                  text
+                }
+              }
             }
 
             ... on ImageBlockRecord {
               id
               title
-              imageContent { url }
+              imageContent {
+                url
+              }
             }
 
             ... on VideoBlockRecord {
               id
               title
-              videoUrl { url provider thumbnailUrl }
+              videoUrl {
+                url
+                provider
+                thumbnailUrl
+              }
             }
 
             ... on PresentationBlockRecord {
@@ -718,7 +894,10 @@ export async function getLessonBySlug(
           }
 
           extraResources {
-            ... on ExtraResourceItemRecord { title url }
+            ... on ExtraResourceItemRecord {
+              title
+              url
+            }
           }
 
           day {
@@ -738,7 +917,11 @@ export async function getLessonBySlug(
                   id
                   title
                   slug
-                  course { id name slug }
+                  course {
+                    id
+                    name
+                    slug
+                  }
                 }
               }
             }

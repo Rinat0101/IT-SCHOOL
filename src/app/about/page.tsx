@@ -18,15 +18,15 @@ export default function AboutPage() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // ✅ Load user info from API
+  // ✅ Load user info from API (using user.id instead of email)
   useEffect(() => {
     async function fetchUser() {
-      if (!session?.user?.email) return;
-      const res = await fetch(`/api/users/${session.user.email}`);
+      if (!session?.user?.id) return;
+      const res = await fetch(`/api/users/${session.user.id}`);
       if (res.ok) {
         const data = await res.json();
         setForm({
-          fullName: `${data.name} ${data.lastName}` || "",
+          fullName: `${data.name ?? ""} ${data.lastName ?? ""}`.trim(),
           github: data.github || "",
           linkedin: data.linkedin || "",
           personalWebsite: data.personalWebsite || "",
@@ -40,13 +40,13 @@ export default function AboutPage() {
 
   // ✅ Handle save
   async function handleSave() {
-    if (!session?.user?.email) return;
+    if (!session?.user?.id) return;
     setSaving(true);
 
     const [firstName, ...rest] = form.fullName.split(" ");
     const lastName = rest.join(" ");
 
-    const res = await fetch(`/api/users/${session.user.email}`, {
+    const res = await fetch(`/api/users/${session.user.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -67,7 +67,7 @@ export default function AboutPage() {
     setSaving(false);
   }
 
-  // ✅ Handle file upload
+  // ✅ Handle file upload (preview only for now)
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -125,32 +125,32 @@ export default function AboutPage() {
             />
 
             {/* Action buttons */}
-{form.profilePicture && (
-  <div className="mt-3 flex items-center gap-2 text-sm text-gray-600">
-    <button
-      type="button"
-      onClick={() => fileInputRef.current?.click()}
-      className="hover:text-blue-600 font-medium"
-    >
-      Choose another
-    </button>
-    <span className="text-gray-300">|</span>
-    <button
-      type="button"
-      onClick={handleDeleteImage}
-      className="hover:text-red-600 font-medium"
-    >
-      Delete
-    </button>
-  </div>
-)}
+            {form.profilePicture && (
+              <div className="mt-3 flex items-center gap-2 text-sm text-gray-600">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="hover:text-blue-600 font-medium"
+                >
+                  Choose another
+                </button>
+                <span className="text-gray-300">|</span>
+                <button
+                  type="button"
+                  onClick={handleDeleteImage}
+                  className="hover:text-red-600 font-medium"
+                >
+                  Delete
+                </button>
+              </div>
+            )}
 
             <p className="text-xs text-gray-400 mt-2 text-center">
               Allowed *.jpeg, *.jpg, *.png, *.gif <br /> Max size of 3.1 MB
             </p>
           </div>
 
-          {/* Info */}
+          {/* Info fields */}
           <div className="flex flex-col gap-4 flex-1">
             <input
               type="text"
@@ -161,7 +161,7 @@ export default function AboutPage() {
             />
             <input
               type="text"
-              placeholder="Github"
+              placeholder="GitHub"
               value={form.github}
               onChange={(e) => setForm({ ...form, github: e.target.value })}
               className="input"

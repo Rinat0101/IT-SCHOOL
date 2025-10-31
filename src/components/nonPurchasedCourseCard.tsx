@@ -1,30 +1,60 @@
-import React from "react";
+import Image from "next/image";
 
-interface CourseCardProps {
+type Props = {
   title: string;
   description: string;
   buttonText: string;
-  imageUrl: string;
-}
+  imageUrl?: string;
+  url: string;
+};
 
-const CourseCard: React.FC<CourseCardProps> = ({ title, description, buttonText, imageUrl }) => {
+export default function NonPurchasedCourseCard({
+  title,
+  description,
+  buttonText,
+  imageUrl,
+  url
+}: Props) {
   return (
-    <div className="flex items-center bg-blue-3 rounded-xl p-6 shadow-light-mode">
+    <div className="relative flex items-center bg-blue-3 rounded-xl p-6 shadow-light-mode overflow-hidden">
       {/* Left Side */}
-      <div className="flex-1">
+      <div className="flex-1 min-w-0 relative z-20">
         <h3 className="text-xl font-semibold text-gray-900 mb-2">{title}</h3>
         <p className="text-gray-2 mb-4">{description}</p>
-        <button className="bg-blue-1 text-white py-2 px-6 rounded-md hover:bg-blue-600 btn-shadow">
+
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block bg-blue-1 text-white py-2 px-6 rounded-md hover:bg-blue-600 btn-shadow cursor-pointer"
+          style={{
+            position: "relative",
+            zIndex: 30,
+            pointerEvents: "auto",
+          }}
+        >
           {buttonText}
-        </button>
+        </a>
       </div>
 
-      {/* Right Side - Image */}
-      <div className="w-40 h-40 ml-6">
-        <img src={imageUrl} alt="Course Illustration" className="object-cover w-full h-full rounded-md" />
+      {/* Right Side (Image) */}
+      <div
+        className="ml-6 flex items-center justify-end w-[45%] relative z-10"
+        style={{ pointerEvents: "none" }}
+      >
+        {imageUrl && (
+          <div className="relative w-[420px] h-[150px]">
+            <Image
+              src={imageUrl}
+              alt="Course Illustration"
+              fill
+              className="object-contain w-auto h-auto rounded-md"
+              priority
+              sizes="(max-width: 768px) 100vw, 45vw"
+            />
+          </div>
+        )}
       </div>
     </div>
   );
-};
-
-export default CourseCard;
+}

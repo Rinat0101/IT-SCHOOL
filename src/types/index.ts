@@ -28,7 +28,8 @@ export type Course = {
   slug: string;
   enabled: boolean;
   language: LanguageCode;
-  coverImage?: { url: string } | null;
+  coverImage?: { url: string };
+  url: string;
 
   sections: Section[];
 };

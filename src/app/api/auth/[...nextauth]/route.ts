@@ -2,6 +2,7 @@ import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import connectDB from "@/lib/mongoose";
 import User from "@/models/User";
+import "@/models/CourseEnrollment";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -17,12 +18,11 @@ export const authOptions: NextAuthOptions = {
         try {
           await connectDB();
 
-          // 🔹 populate enrollments with course info
-          const user = await User.findOne({ email: credentials.email })
-            .populate({
-              path: "enrollments",
-              populate: { path: "courseId" }, // fetch course data
-            });
+          // 🔹 Find user and populate enrollments
+          const user = await User.findOne({ email: credentials.email }).populate({
+            path: "enrollments",
+            populate: { path: "courseId" },
+          });
 
           if (!user) return null;
 
@@ -30,9 +30,9 @@ export const authOptions: NextAuthOptions = {
           if (!isValid) return null;
 
           return {
-            id: user._id.toString(),
+            id: user._id.toString(), // ✅ ensure it's a plain string
             email: user.email,
-            name: `${user.name} ${user.lastName}`,
+            name: `${user.name} ${user.lastName}`.trim(),
             role: user.role,
             enrollments: user.enrollments || [],
           };
@@ -55,7 +55,7 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string;
+        session.user.id = token.id?.toString?.() || token.id;
         session.user.role = token.role as "student" | "admin";
         session.user.enrollments = token.enrollments || [];
       }

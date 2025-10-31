@@ -8,19 +8,25 @@ import type { Course } from "@/types";
 type GroupedCourses = { purchased: Course[]; nonPurchased: Course[] };
 
 export default function CoursesClient({ courses }: { courses: GroupedCourses }) {
-  const purchasedSorted = [...courses.purchased].sort((a, b) =>
-    a.name.localeCompare(b.name)
-  );
-  const nonPurchasedSorted = [...courses.nonPurchased].sort((a, b) =>
-    a.name.localeCompare(b.name)
-  );
+  const purchasedSorted = [...courses.purchased].sort((a, b) => a.name.localeCompare(b.name));
+  const nonPurchasedSorted = [...courses.nonPurchased].sort((a, b) => a.name.localeCompare(b.name));
 
-  console.log(purchasedSorted, nonPurchasedSorted)
+  // 🧩 Helper to format ISO date strings
+  const formatDate = (date: string | null | undefined) => {
+    if (!date || date === "N/A") return "—";
+    const parsed = new Date(date);
+    if (isNaN(parsed.getTime())) return "—";
+    return parsed.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
 
   return (
     <div className="min-h-screen bg-white">
       <div className="container mx-auto">
-        <h1 className="text-xl text-[#000000] font-bold mb-6">Courses</h1>
+        <h1 className="text-xl text-[#000000] font-bold my-6">Courses</h1>
 
         {/* Purchased */}
         <section className="mb-8">
@@ -33,8 +39,8 @@ export default function CoursesClient({ courses }: { courses: GroupedCourses }) 
                 <Link key={course.id} href={`/courses/${course.slug}`} className="block">
                   <PurchasedCourseCard
                     title={course.name}
-                    startDate={course.startDate ?? "N/A"}
-                    endDate={course.endDate ?? "N/A"}
+                    startDate={formatDate(course.startDate)}
+                    endDate={formatDate(course.endDate)}
                     completionPercentage={60}
                   />
                 </Link>
@@ -46,17 +52,16 @@ export default function CoursesClient({ courses }: { courses: GroupedCourses }) 
         {/* Non-Purchased */}
         {nonPurchasedSorted.length > 0 && (
           <section className="mb-8">
-            <h2 className="text-2xl text-gray-2 font-semibold mb-4">
-              Courses that will help you become a better person
-            </h2>
+            <h2 className="text-2xl text-gray-2 font-semibold mb-4">Other Courses</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {nonPurchasedSorted.map((course) => (
                 <NonPurchasedCourseCard
                   key={course.id}
                   title={course.name}
-                  description="Unlock to learn more"
-                  buttonText="Preview"
-                  imageUrl="/images/nonpurchased.png"
+                  description="Master test automation under the guidance of experts"
+                  buttonText="Learn More"
+                  imageUrl={course.coverImage?.url ?? "/images/AQA.webp"}
+                  url={course.url}
                 />
               ))}
             </div>

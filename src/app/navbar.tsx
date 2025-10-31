@@ -9,7 +9,7 @@ type SafeUser = {
   name?: string | null; 
   email?: string | null; 
   image?: string | null; 
-  enrollments?: any[]; // 🔹 add this to catch enrollments
+  enrollments?: any[];
 };
 
 export default function Navbar() {
@@ -21,7 +21,7 @@ export default function Navbar() {
     <header className="w-full bg-white border-b border-gray-100">
       <div className="mx-auto max-w-[1200px] px-6 md:px-8 h-16 flex items-center">
         <div className="shrink-0">
-          <Link href="/dashboard" aria-label="Home" className="flex items-center gap-2">
+          <Link href="/courses" aria-label="Home" className="flex items-center gap-2">
             <Image src="/images/logo.svg" alt="Logo" width={62} height={44} priority />
           </Link>
         </div>

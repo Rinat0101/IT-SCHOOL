@@ -7,20 +7,47 @@ import ModuleWrapper from "./ModuleWrapper";
 import type { CourseHeader, SectionDeepForPage } from "@/types/index";
 
 interface SectionClientPageProps {
-  course: CourseHeader;             // slim course info
-  section: SectionDeepForPage;      // deep section structure
-  enrollment?: any;                 // user’s enrollment for progress
+  course: CourseHeader;
+  section: SectionDeepForPage;
+  enrollment?: any;
+  userProgress?: {
+    courseId: string;
+    completedLessons: string[];
+  };
 }
 
-export default function SectionClientPage({ course, section, enrollment }: SectionClientPageProps) {
+export default function SectionClientPage({
+  course,
+  section,
+  enrollment,
+  userProgress,
+}: SectionClientPageProps) {
   const setSelectedCourse = useCourseStore((s) => s.setSelectedCourse);
   const setSelectedSection = useCourseStore((s) => s.setSelectedSection);
+  const setSelectedModule = useCourseStore((s) => s.setSelectedModule);
+  const setSelectedWeekId = useCourseStore((s) => s.setSelectedWeekId);
 
-  // hydrate Zustand store
+  // 🟣 Reset and hydrate Zustand store on section change
   useEffect(() => {
+    // 🧹 Clear previous section/module/week state
+    useCourseStore.setState({
+      selectedCourse: null,
+      selectedSection: null,
+      selectedModule: null,
+      selectedWeekId: null,
+    });
+
+    // 🆕 Set new course + section
     setSelectedCourse(course as any);
     setSelectedSection(section as any);
-  }, [course, section, setSelectedCourse, setSelectedSection]);
+  }, [
+    course.id, // run only when switching course or section
+    section.id,
+    setSelectedCourse,
+    setSelectedSection,
+    setSelectedModule,
+    setSelectedWeekId,
+  ]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -37,8 +64,8 @@ export default function SectionClientPage({ course, section, enrollment }: Secti
           className="mb-6"
         />
 
-        {/* Module wrapper now gets enrollment */}
-        <ModuleWrapper enrollment={enrollment} />
+        {/* 🟢 Pass both enrollment and userProgress */}
+        <ModuleWrapper enrollment={enrollment} userProgress={userProgress} />
       </div>
     </div>
   );

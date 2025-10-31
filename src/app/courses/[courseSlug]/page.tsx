@@ -4,10 +4,14 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import Breadcrumbs, { Crumb } from "@/app/path";
 import CourseProgress from "@/app/courseProgress";
+import connectDB from "@/lib/mongoose";
+import UserProgress from "@/models/UserProgress";
 
 export default async function CoursePage({
   params,
-}: { params: { courseSlug: string } }) {
+}: {
+  params: { courseSlug: string };
+}) {
   // ✅ Ensure user is logged in
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
@@ -16,11 +20,24 @@ export default async function CoursePage({
   const course = await getCourse(params.courseSlug);
   if (!course) return notFound();
 
-  // ✅ Find matching enrollment from session
+  // ✅ Find enrollment from session (if available)
   const enrollment = session.user.enrollments?.find(
     (e: any) => e.courseId?.datoCmsId === course.id
   );
 
+  // ✅ Get user progress from MongoDB for this course
+  await connectDB();
+
+  let userProgress = null;
+  if (session.user?.id && enrollment?.courseId?._id) {
+    userProgress = await UserProgress.findOne({
+      userId: session.user.id,
+      courseId: enrollment.courseId._id,
+    })
+      .select("courseId completedLessons")
+      .lean();
+  }
+console.log(userProgress)
   const items: Crumb[] = [
     { label: "Courses", href: "/courses" },
     { label: course.name }, // current page (no href)
@@ -33,11 +50,16 @@ export default async function CoursePage({
 
         <Breadcrumbs items={items} className="mb-6" />
 
-        {/* 🔹 Pass enrollment into CourseProgress */}
+        {/* 🔹 Pass enrollment + userProgress into CourseProgress */}
         <CourseProgress
           courseSlug={params.courseSlug}
           sections={course.sections}
           enrollment={enrollment}
+          userProgress={
+            userProgress
+              ? JSON.parse(JSON.stringify(userProgress))
+              : { courseId: "", completedLessons: [] }
+          }
         />
       </div>
     </div>

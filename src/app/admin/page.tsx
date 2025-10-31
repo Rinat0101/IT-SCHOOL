@@ -4,12 +4,19 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import UserModal from "@/components/admin/UserModal";
 
+type Enrollment = {
+  _id: string;
+  courseId: { name: string };
+  accessLevel: "limited" | "full";
+};
+
 type User = {
   _id: string;
   name: string;
   lastName: string;
   email: string;
   role: "student" | "admin";
+  enrollments?: Enrollment[];
   github?: string;
   linkedin?: string;
   personalWebsite?: string;
@@ -28,7 +35,6 @@ export default function AdminDashboard() {
     return <p className="p-6 text-red-500">🚫 Forbidden: Admins only</p>;
   }
 
-  // Fetch all users
   async function fetchUsers() {
     setLoading(true);
     const res = await fetch("/api/users");
@@ -43,7 +49,6 @@ export default function AdminDashboard() {
     fetchUsers();
   }, []);
 
-  // Delete user
   async function handleDelete(id: string) {
     if (!confirm("Are you sure you want to delete this user?")) return;
     const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
@@ -51,6 +56,20 @@ export default function AdminDashboard() {
       setUsers((prev) => prev.filter((u) => u._id !== id));
     } else {
       alert("❌ Failed to delete user");
+    }
+  }
+
+  async function handleAccessChange(enrollmentId: string, newAccess: string) {
+    const res = await fetch(`/api/enrollments/${enrollmentId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ access: newAccess }),
+    });
+
+    if (res.ok) {
+      await fetchUsers(); // refresh data
+    } else {
+      alert("❌ Failed to update access");
     }
   }
 
@@ -78,15 +97,33 @@ export default function AdminDashboard() {
               <th className="px-4 py-2">Name</th>
               <th className="px-4 py-2">Email</th>
               <th className="px-4 py-2">Role</th>
+              <th className="px-4 py-2">Course Access</th>
               <th className="px-4 py-2">Actions</th>
             </tr>
           </thead>
           <tbody>
             {users.map((u) => (
-              <tr key={u._id} className="border-t">
-                <td className="px-4 py-2">{u.name} {u.lastName}</td>
+              <tr key={u._id} className="border-t align-top">
+                <td className="px-4 py-2">
+                  {u.name} {u.lastName}
+                </td>
                 <td className="px-4 py-2">{u.email}</td>
                 <td className="px-4 py-2 capitalize">{u.role}</td>
+                <td className="px-4 py-2 text-sm text-gray-700">
+                  {u.enrollments?.length ? (
+                    <div className="flex flex-col gap-1">
+                      {u.enrollments.map((enr) => (
+                        <div key={enr._id}>
+                          {enr.courseId?.name
+                            ? `${enr.courseId.name} — ${enr.accessLevel === "full" ? "Full" : "Limited"}`
+                            : "Unknown course"}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-gray-400">No enrollments</span>
+                  )}
+                </td>
                 <td className="px-4 py-2 flex gap-2">
                   <button
                     onClick={() => {
@@ -111,11 +148,7 @@ export default function AdminDashboard() {
       )}
 
       {modalOpen && (
-        <UserModal
-          user={editingUser}
-          onClose={() => setModalOpen(false)}
-          onSaved={fetchUsers}
-        />
+        <UserModal user={editingUser} onClose={() => setModalOpen(false)} onSaved={fetchUsers} />
       )}
     </div>
   );

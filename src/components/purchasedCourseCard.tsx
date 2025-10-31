@@ -19,7 +19,7 @@ const CourseSectionCard = ({
       </p>
 
       <div className="flex items-center gap-2">
-        {/* Progress bar */}
+        {/* Progress bar
         <div className="flex-1 h-1 bg-gray-200 rounded-full">
           <div
             className="h-full rounded-full"
@@ -30,10 +30,10 @@ const CourseSectionCard = ({
           ></div>
         </div>
 
-        {/* Percentage */}
+        {/* Percentage
         <span className="text-sm font-medium text-gray-1">
           {completionPercentage}%
-        </span>
+        </span> */}
       </div>
     </div>
   );

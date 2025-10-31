@@ -3,7 +3,7 @@ import { Course, Section, Module, Lesson } from "@/types";
 import { getAllCourses, getModuleStructure } from "@/lib/datocms";
 
 type CourseStore = {
-  // Data
+  // ====== Core Data ======
   purchasedCourses: Course[];
   nonPurchasedCourses: Course[];
   selectedCourse: Course | null;
@@ -15,11 +15,16 @@ type CourseStore = {
   sectionProgress: Record<string, number>;
   isLoading: boolean;
 
-  // Fetch functions
+  // ====== Completion Sync ======
+  completedLessons: string[];
+  setCompletedLessons: (lessons: string[]) => void;
+  toggleLessonCompletion: (lessonId: string, completed: boolean) => void;
+
+  // ====== Fetchers ======
   fetchGroupedCourses: (userEnrollments?: any[]) => Promise<void>;
   fetchModuleStructure: (module: Partial<Module>) => Promise<void>;
 
-  // Setters
+  // ====== Setters ======
   setPurchasedCourses: (courses: Course[]) => void;
   setNonPurchasedCourses: (courses: Course[]) => void;
   setSelectedCourse: (course: Course | null) => void;
@@ -28,12 +33,12 @@ type CourseStore = {
   setSelectedWeekId: (id: string | null) => void;
   setSelectedLesson: (lesson: Lesson | null) => void;
 
-  // Reset
+  // ====== Reset ======
   reset: () => void;
 };
 
 export const useCourseStore = create<CourseStore>((set) => ({
-  // Initial state
+  // ─── Initial State ───
   purchasedCourses: [],
   nonPurchasedCourses: [],
   selectedCourse: null,
@@ -45,13 +50,23 @@ export const useCourseStore = create<CourseStore>((set) => ({
   sectionProgress: {},
   isLoading: false,
 
-  // 🔹 Fetch purchased + non-purchased courses
+  // ─── New: Global Lesson Completion ───
+  completedLessons: [],
+  setCompletedLessons: (lessons) => set({ completedLessons: lessons }),
+  toggleLessonCompletion: (lessonId, completed) =>
+    set((state) => {
+      const updated = completed
+        ? [...state.completedLessons, lessonId]
+        : state.completedLessons.filter((id) => id !== lessonId);
+      return { completedLessons: updated };
+    }),
+
+  // ─── Fetch Purchased / Non‑Purchased ───
   fetchGroupedCourses: async (userEnrollments = []) => {
     set({ isLoading: true });
     try {
       const allCourses = await getAllCourses();
 
-      // If user has enrollments → split purchased / non-purchased
       const purchasedIds = userEnrollments.map((e: any) => e.courseId?.datoCmsId);
       const purchased = allCourses.filter((c) => purchasedIds.includes(c.id));
       const nonPurchased = allCourses.filter((c) => !purchasedIds.includes(c.id));
@@ -64,7 +79,7 @@ export const useCourseStore = create<CourseStore>((set) => ({
     }
   },
 
-  // 🔹 Fetch module structure (weeks → days → lessons)
+  // ─── Fetch Module Structure (weeks → days → lessons) ───
   fetchModuleStructure: async (module) => {
     console.log("🟣 fetchModuleStructure called with:", module);
     if (!module?.id) {
@@ -91,7 +106,7 @@ export const useCourseStore = create<CourseStore>((set) => ({
     }
   },
 
-  // 🔧 Setters
+  // ─── Setters ───
   setPurchasedCourses: (courses) => set({ purchasedCourses: courses }),
   setNonPurchasedCourses: (courses) => set({ nonPurchasedCourses: courses }),
   setSelectedCourse: (course) => set({ selectedCourse: course }),
@@ -100,7 +115,7 @@ export const useCourseStore = create<CourseStore>((set) => ({
   setSelectedWeekId: (id) => set({ selectedWeekId: id }),
   setSelectedLesson: (lesson) => set({ selectedLesson: lesson }),
 
-  // 🔄 Reset all store state
+  // ─── Reset Store ───
   reset: () =>
     set({
       purchasedCourses: [],
@@ -113,5 +128,6 @@ export const useCourseStore = create<CourseStore>((set) => ({
       selectedLesson: null,
       sectionProgress: {},
       isLoading: false,
+      completedLessons: [],
     }),
 }));

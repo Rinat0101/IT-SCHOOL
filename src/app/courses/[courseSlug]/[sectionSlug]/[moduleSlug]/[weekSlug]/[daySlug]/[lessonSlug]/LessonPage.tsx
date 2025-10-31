@@ -1,7 +1,7 @@
-// app/courses/[courseSlug]/[sectionSlug]/[moduleSlug]/[weekSlug]/[daySlug]/[lessonSlug]/LessonPage.tsx
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { useCourseStore } from "@/stores/useCourseStore";
 import Breadcrumbs from "@/app/path";
 import LessonBlockRenderer from "./components/LessonBlockRenderer";
 import LessonTopicsSidebar from "./components/LessonTopicsSidebar";
@@ -9,6 +9,8 @@ import DaySideBar from "./components/DaySideBar";
 import ExtraResources from "./components/ExtraResources";
 import LessonNavButtons from "./components/LessonNavButtons";
 import LabLesson from "./components/LabLesson";
+import CompletedButton from "./components/CompletedButton";
+import { cleanTitle } from "@/app/utils/cleanTitles";
 
 import type {
   Lesson as LessonType,
@@ -53,10 +55,7 @@ export interface LessonPageProps {
   sectionSlug: string;
   sectionTitle: string;
 
-  /** Provided by server page.tsx so DaySidebar never guesses from URL */
   baseHref: string;
-
-  /** 🆕 From server-side enrollment check */
   enrollmentId: string;
   completedLessons: string[];
 }
@@ -71,15 +70,39 @@ export default function LessonPage({
   sectionTitle,
   baseHref,
   enrollmentId,
-  completedLessons,
+  completedLessons: initialCompletedLessons,
 }: LessonPageProps) {
-  const blocks = lesson?.content ?? [];
+  // ✅ Zustand global progress
+  const completedLessons = useCourseStore((s) => s.completedLessons);
+  const setCompletedLessons = useCourseStore((s) => s.setCompletedLessons);
 
-  // Keep ordering consistent (sidebar + nav buttons)
+  // ✅ Initialize store when page mounts or data changes
+  useEffect(() => {
+    if (initialCompletedLessons?.length) {
+      setCompletedLessons(initialCompletedLessons);
+    }
+  }, [initialCompletedLessons, setCompletedLessons]);
+
+  // ✅ Handler for toggling lesson completion (syncs sidebar + button)
+  const handleToggleLesson = (lessonId: string, isNowCompleted: boolean) => {
+    setCompletedLessons((prev) =>
+      isNowCompleted
+        ? [...new Set([...prev, lessonId])]
+        : prev.filter((id) => id !== lessonId)
+    );
+  };
+
+  const blocks = lesson?.content ?? [];
   const lessonsSorted = useMemo(
-    () => [...(day.lessons ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+    () =>
+      [...(day.lessons ?? [])]
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        .map((l) => ({ ...l, title: cleanTitle(l.title) })),
     [day.lessons]
   );
+
+  const cleanedLessonTitle = cleanTitle(lesson.title);
+  const cleanedDayTitle = cleanTitle(day.title);
 
   return (
     <div className="w-full bg-white min-h-screen px-4 md:px-6 lg:px-8 py-6">
@@ -92,37 +115,52 @@ export default function LessonPage({
               baseHref={baseHref}
               lessons={lessonsSorted}
               currentLessonSlug={lesson.slug}
-              currentDayTitle={day.title}
+              currentDayTitle={cleanedDayTitle}
               sectionHref={`/courses/${courseSlug}/${sectionSlug}`}
               completedLessons={completedLessons}
             />
           </aside>
 
-          {/* MIDDLE: Content */}
+          {/* MIDDLE: Main lesson content */}
           <div className="flex-1 flex justify-center">
             <div className="w-full max-w-[800px]">
               <div className="rounded-2xl shadow-md p-6 md:p-8 bg-white">
-                <h1 className="text-3xl font-bold text-[#212B36] mb-4">{lesson.title}</h1>
+                <h1 className="text-3xl font-bold text-[#212B36] mb-4">
+                  {cleanedLessonTitle}
+                </h1>
 
                 <Breadcrumbs
                   items={[
                     { label: "Courses", href: "/courses" },
-                    { label: courseTitle, href: `/courses/${courseSlug}` },
-                    { label: sectionTitle, href: `/courses/${courseSlug}/${sectionSlug}` },
-                    { label: lesson.title },
+                    { label: cleanTitle(courseTitle), href: `/courses/${courseSlug}` },
+                    {
+                      label: cleanTitle(sectionTitle),
+                      href: `/courses/${courseSlug}/${sectionSlug}`,
+                    },
+                    { label: cleanedLessonTitle },
                   ]}
                   className="mb-6"
                 />
 
-                {/* Render LabLesson if it's a lab, otherwise normal blocks */}
                 {lesson.lessonType === "Lab" ? (
                   <LabLesson
                     labDescription={lesson.labDescription}
                     lessonId={lesson.id}
                     enrollmentId={enrollmentId}
+                    autoCompleteCourseId={courseId}
                   />
                 ) : (
-                  <LessonBlockRenderer blocks={blocks} />
+                  <>
+                    <LessonBlockRenderer blocks={blocks} />
+                    <div className="mt-6 flex justify-center">
+                      <CompletedButton
+                        lessonId={lesson.id}
+                        courseId={courseId}
+                        isCompleted={completedLessons.includes(lesson.id)}
+                        onToggle={handleToggleLesson}
+                      />
+                    </div>
+                  </>
                 )}
               </div>
 
@@ -134,14 +172,21 @@ export default function LessonPage({
               {/* Prev/Next navigation */}
               <div className="mt-8">
                 <LessonNavButtons
-                  currentLesson={{ id: lesson.id, slug: lesson.slug, title: lesson.title }}
-                  lessons={lessonsSorted.map(({ slug, title }) => ({ slug, title }))}
+                  currentLesson={{
+                    id: lesson.id,
+                    slug: lesson.slug,
+                    title: cleanedLessonTitle,
+                  }}
+                  lessons={lessonsSorted.map(({ slug, title }) => ({
+                    slug,
+                    title,
+                  }))}
                 />
               </div>
             </div>
           </div>
 
-          {/* RIGHT: Topics */}
+          {/* RIGHT: Topics Sidebar */}
           <aside className="lg:w-[320px] flex-shrink-0">
             <div className="lg:sticky lg:top-24 self-start">
               <LessonTopicsSidebar

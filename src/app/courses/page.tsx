@@ -8,15 +8,24 @@ export default async function CoursesPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
-  // All courses from DatoCMS
   const allCourses = await getAllCourses();
 
-  // Extract purchased IDs from enrollments
   const enrolledDatoIds =
     session.user.enrollments?.map((e: any) => e.courseId?.datoCmsId).filter(Boolean) ?? [];
 
-  // Split into purchased / non-purchased
-  const purchased = allCourses.filter((c) => enrolledDatoIds.includes(c.id));
+  const purchased = allCourses
+    .filter((c) => enrolledDatoIds.includes(c.id))
+    .map((c) => {
+      const enrollment = session.user.enrollments.find(
+        (e: any) => e.courseId?.datoCmsId === c.id
+      );
+      return {
+        ...c,
+        startDate: enrollment?.startDate ?? null,
+        endDate: enrollment?.endDate ?? null,
+      };
+    });
+
   const nonPurchased = allCourses.filter((c) => !enrolledDatoIds.includes(c.id));
 
   return <CoursesClient courses={{ purchased, nonPurchased }} />;

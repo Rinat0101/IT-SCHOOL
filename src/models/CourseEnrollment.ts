@@ -1,23 +1,24 @@
 import mongoose, { Schema, Document } from "mongoose";
 import "@/models/Course";
+
 export interface IEnrollment extends Document {
   userId: mongoose.Types.ObjectId;   // reference to User
   courseId: mongoose.Types.ObjectId; // reference to Course
   startDate: Date;
   endDate: Date;
   status: "active" | "completed" | "cancelled";
+
   goals?: {
     choices: string[];
     location?: string;
     deadline?: Date;
   };
 
-  // 🆕 Labs: store submissions per lesson
-  labs?: {
-    lessonId: string;                 // ⚠️ store lessonId from DatoCMS instead of Mongo ObjectId
-    repoLink: string;                 // student's submitted repo link
-    submittedAt: Date;
-  }[];
+  // 🟣 NEW: Access control
+  accessLevel: "limited" | "full";
+
+  // Optional: to track when it was upgraded
+  accessUpgradedAt?: Date;
 }
 
 const EnrollmentSchema = new Schema<IEnrollment>(
@@ -36,14 +37,14 @@ const EnrollmentSchema = new Schema<IEnrollment>(
       location: String,
       deadline: Date,
     },
-    labs: [
-      {
-        // ⚠️ lessonId from DatoCMS (string)
-        lessonId: { type: String, required: true },
-        repoLink: { type: String, required: true },
-        submittedAt: { type: Date, default: Date.now },
-      },
-    ],
+
+    // 🔒 New access level control
+    accessLevel: {
+      type: String,
+      enum: ["limited", "full"],
+      default: "limited",
+    },
+    accessUpgradedAt: { type: Date },
   },
   { timestamps: true }
 );

@@ -1,4 +1,3 @@
-// models/Goal.ts
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface IGoal extends Document {

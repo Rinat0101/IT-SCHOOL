@@ -111,16 +111,19 @@ function preprocessDirectives(markdown: string): string {
     <img src="${src}" alt="" style="width:100%; height:auto;" />
   </div>
   <div class="md:flex-1 w-full text-[15px] leading-7 text-[#1B2633]">
-    ${text
-      .trim()
-      .replace(/\n+/g, "<br>")
-      .replace(/^([A-Z].*?)(\.|\!|\?)\s/, "<strong>$1</strong>$2 ")}
+  ${text
+    .trim()
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")   // Bold: **text**
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")               // Italic: *text*
+    .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 bg-gray-100 text-gray-800 font-mono rounded-md text-[0.9em]">$1</code>') // Inline code
+    .replace(/\n+/g, "<br>")
+  }
   </div>
 </div>`;
     }
   );
 
-// --- Alert boxes (inline + block code support) ---
+// --- Alert boxes (inline + block code support, with bold title + HTML rendering) ---
 markdown = markdown.replace(
   /:::alert\s+(info|success|warning|danger)\s*\n([\s\S]*?)\n:::/gi,
   (_, type, body) => {
@@ -139,28 +142,22 @@ markdown = markdown.replace(
     let title = "";
     let rest = "";
 
-    // Detect bold title
     if (firstNonEmptyIndex !== -1) {
-      const firstLine = lines[firstNonEmptyIndex].trim();
-      const boldMatch = /^\*\*(.+?)\*\*/.exec(firstLine);
-      if (boldMatch) {
-        title = boldMatch[1].trim();
-        rest = lines.slice(firstNonEmptyIndex + 1).join("\n").trim();
-      } else {
-        rest = lines.join("\n").trim();
-      }
+      title = lines[firstNonEmptyIndex].trim();
+      rest = lines.slice(firstNonEmptyIndex + 1).join("\n").trim();
     }
 
     const titleWithInlineCode = title
       ? `<div class="font-semibold mb-2" style="color:${preset.text}">
-          ${title.replace(
-            /`([^`]+)`/g,
-            '<code class="px-1 py-0.5 bg-gray-100 text-gray-800 font-mono rounded-md text-[0.9em]">$1</code>'
-          )}
+          ${title
+            .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") // ✅ support for **bold**
+            .replace(
+              /`([^`]+)`/g,
+              '<code class="px-1 py-0.5 bg-gray-100 text-gray-800 font-mono rounded-md text-[0.9em]">$1</code>'
+            )}
         </div>`
       : "";
 
-    // ✅ Properly separate text vs code — keeps color for text, syntax for code
     const bodyWithBlocks = rest
       .split(/(```[\s\S]*?```)/g)
       .map((segment) => {
@@ -171,19 +168,21 @@ markdown = markdown.replace(
           const code = match[2].trim();
           return `
 <div>
-  <pre class="text-[0.9rem] leading-6 font-mono overflow-auto">
+<pre class="text-[0.9rem] leading-6 font-mono overflow-auto my-0 p-2">
     <code class="language-${lang}">${code}</code>
   </pre>
 </div>`;
         } else {
-          return `<div class="alert-text" style="color:${preset.text}">
-            ${segment
-              .replace(
-                /`([^`]+)`/g,
-                '<code class="px-1 py-0.5 bg-gray-100 text-gray-800 font-mono rounded-md text-[0.9em]">$1</code>'
-              )
-              .trim()}
-          </div>`;
+          // ✅ Add **bold** and inline code support
+          const html = segment
+            .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") // ✅ bold support
+            .replace(
+              /`([^`]+)`/g,
+              '<code class="px-1 py-0.5 bg-gray-100 text-gray-800 font-mono rounded-md text-[0.9em]">$1</code>'
+            )
+            .trim();
+
+          return `<div class="alert-text prose prose-sm" style="color:${preset.text}">${html}</div>`;
         }
       })
       .join("");
@@ -316,8 +315,6 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
               rel="noopener noreferrer"
             />
           ),
-
-          // Headings
           // Headings (with inline code styling)
           h1: ({ children, ...rest }) => (
             <h1
@@ -362,6 +359,17 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
             >
               {children}
             </h4>
+          ),
+          h5: ({ children, ...rest }) => (
+            <h5
+              {...rest}
+              className="text-base font-medium text-[#212B36] mt-3 mb-1.5
+               [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded-md
+               [&>code]:bg-gray-100 [&>code]:text-gray-800
+               [&>code]:font-mono [&>code]:text-[0.9em]"
+            >
+              {children}
+            </h5>
           ),
           // Text elements
           p: (props) => <p {...props} className="mb-4 text-[15px] leading-7 text-[#1B2633]" />,

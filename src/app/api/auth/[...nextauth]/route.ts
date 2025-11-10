@@ -1,10 +1,11 @@
-import NextAuth, { NextAuthOptions } from "next-auth";
+import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import connectDB from "@/lib/mongoose";
 import User from "@/models/User";
 import "@/models/CourseEnrollment";
+import type { IUser } from "@/models/User";
 
-export const authOptions: NextAuthOptions = {
+const handler = NextAuth({
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -21,7 +22,7 @@ export const authOptions: NextAuthOptions = {
           const user = await User.findOne({ email: credentials.email }).populate({
             path: "enrollments",
             populate: { path: "courseId" },
-          });
+          }) as IUser | null;
 
           if (!user) return null;
 
@@ -33,7 +34,7 @@ export const authOptions: NextAuthOptions = {
             email: user.email,
             name: `${user.name} ${user.lastName}`.trim(),
             role: user.role,
-            enrollments: user.enrollments || [],
+            enrollments: Array.isArray(user.enrollments) ? user.enrollments : [],
           };
         } catch (error) {
           console.error("❌ Authorization error:", error);
@@ -45,18 +46,27 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     async jwt({ token, user }) {
-      if (user) {
-        token.id = (user as any).id;
-        token.role = (user as any).role;
-        token.enrollments = (user as any).enrollments || [];
+      if (user && typeof user === "object") {
+        const u = user as {
+          id: string;
+          role: "student" | "admin";
+          enrollments?: any[];
+        };
+
+        token.id = u.id;
+        token.role = u.role;
+        token.enrollments = Array.isArray(u.enrollments) ? u.enrollments : [];
       }
       return token;
     },
+
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id;
+        session.user.id = token.id as string;
         session.user.role = token.role as "student" | "admin";
-        session.user.enrollments = token.enrollments || [];
+        session.user.enrollments = Array.isArray(token.enrollments)
+          ? token.enrollments
+          : [];
       }
       return session;
     },
@@ -65,7 +75,6 @@ export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
   secret: process.env.NEXTAUTH_SECRET,
-};
+});
 
-const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };

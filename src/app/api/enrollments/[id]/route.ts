@@ -1,13 +1,15 @@
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/mongoose";
 import Enrollment from "@/models/CourseEnrollment";
 
-// ✅ PATCH /api/enrollments/[id]
-export async function PATCH(req: NextRequest, context: { params: { id: string } }) {
+export async function PATCH(
+  req: NextRequest,
+  context: { params: { id: string } }
+) {
+  const { id } = context.params;
+
   try {
     await connectDB();
-    const { id } = context.params;
     const { accessLevel } = await req.json();
 
     if (!accessLevel) {

@@ -12,7 +12,7 @@ interface SectionPageProps {
 }
 
 export default async function SectionPage({ params }: SectionPageProps) {
-  const { courseSlug, sectionSlug } = params;
+  const { courseSlug, sectionSlug } = await params;
 
   // 1️⃣ Fetch section & course data from DatoCMS
   const data = await getSectionDeep(courseSlug, sectionSlug);

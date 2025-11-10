@@ -4,13 +4,15 @@ import Enrollment from "@/models/CourseEnrollment";
 
 export async function PATCH(
   req: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
-  const { id } = context.params;
+  const { id } = params;
 
   try {
     await connectDB();
-    const { accessLevel } = await req.json();
+
+    const body = await req.json();
+    const { accessLevel } = body;
 
     if (!accessLevel) {
       return NextResponse.json({ error: "Missing accessLevel" }, { status: 400 });

@@ -5,7 +5,7 @@ import User from "@/models/User";
 import "@/models/CourseEnrollment";
 import type { IUser } from "@/models/User";
 
-const handler = NextAuth({
+export const authOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -75,6 +75,8 @@ const handler = NextAuth({
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
   secret: process.env.NEXTAUTH_SECRET,
-});
+};
 
+// ✅ Now create the handler using the shared authOptions
+const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };

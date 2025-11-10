@@ -5,8 +5,7 @@ import User from "@/models/User";
 import "@/models/CourseEnrollment";
 import type { IUser } from "@/models/User";
 
-// ✅ ADD THIS EXPORT
-export const authOptions = {
+const handler = NextAuth({
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -76,9 +75,6 @@ export const authOptions = {
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
   secret: process.env.NEXTAUTH_SECRET,
-};
-
-// ✅ CREATE THE HANDLER USING authOptions
-const handler = NextAuth(authOptions);
+});
 
 export { handler as GET, handler as POST };

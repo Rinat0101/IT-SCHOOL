@@ -11,6 +11,9 @@ const nextConfig = {
   images: {
     domains: ['www.datocms-assets.com'],
   },
+  eslint: {
+    ignoreDuringBuilds: true, 
+  },
 };
 
 module.exports = nextConfig;

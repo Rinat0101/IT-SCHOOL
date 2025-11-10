@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/mongoose";
-import Goal from "@/models/Goal";
+import Goal from "@/models/Goals";
 
 export async function PATCH(
   req: NextRequest,

@@ -87,7 +87,7 @@ export async function getAllCourses(): Promise<Course[]> {
         slug
         enabled
         language
-        covermage {
+        coverImage {
           url
         }
         url

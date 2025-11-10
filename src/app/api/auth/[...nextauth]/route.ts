@@ -18,7 +18,6 @@ export const authOptions: NextAuthOptions = {
         try {
           await connectDB();
 
-          // 🔹 Find user and populate enrollments
           const user = await User.findOne({ email: credentials.email }).populate({
             path: "enrollments",
             populate: { path: "courseId" },
@@ -30,14 +29,14 @@ export const authOptions: NextAuthOptions = {
           if (!isValid) return null;
 
           return {
-            id: user._id.toString(), // ✅ ensure it's a plain string
+            id: user._id.toString(),
             email: user.email,
             name: `${user.name} ${user.lastName}`.trim(),
             role: user.role,
             enrollments: user.enrollments || [],
           };
         } catch (error) {
-          console.error("Auth error:", error);
+          console.error("❌ Authorization error:", error);
           return null;
         }
       },
@@ -55,7 +54,7 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id?.toString?.() || token.id;
+        session.user.id = token.id;
         session.user.role = token.role as "student" | "admin";
         session.user.enrollments = token.enrollments || [];
       }

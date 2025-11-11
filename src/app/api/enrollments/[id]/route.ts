@@ -1,26 +1,33 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongoose";
 import Enrollment from "@/models/CourseEnrollment";
 
+// PATCH route for updating enrollment access level
 export async function PATCH(
-  req: NextRequest,
-  context: { params: Record<string, string> } 
+  request: Request,
+  { params }: { params: { id: string } }
 ) {
-  const { id } = context.params;
+  const { id } = params;
 
   try {
     await connectDB();
 
-    const body = await req.json();
+    const body = await request.json();
     const { accessLevel } = body;
 
     if (!accessLevel) {
-      return NextResponse.json({ error: "Missing accessLevel" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing accessLevel" },
+        { status: 400 }
+      );
     }
 
     const enrollment = await Enrollment.findById(id);
     if (!enrollment) {
-      return NextResponse.json({ error: "Enrollment not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Enrollment not found" },
+        { status: 404 }
+      );
     }
 
     enrollment.accessLevel = accessLevel;
@@ -32,6 +39,9 @@ export async function PATCH(
     return NextResponse.json(updated, { status: 200 });
   } catch (error) {
     console.error("❌ Error updating enrollment:", error);
-    return NextResponse.json({ error: "Failed to update enrollment" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to update enrollment" },
+      { status: 500 }
+    );
   }
 }

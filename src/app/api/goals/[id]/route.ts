@@ -6,7 +6,7 @@ import Goal from "@/models/Goals";
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   await connectDB();
   const session = await getServerSession(authOptions);

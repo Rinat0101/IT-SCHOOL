@@ -7,41 +7,38 @@ import UserProgress from "@/models/UserProgress";
 import { getSectionDeep } from "@/lib/datocms";
 import SectionClientPage from "./components/SectionClientPage";
 
-interface SectionPageProps {
+export default async function SectionPage({
+  params,
+}: {
   params: { courseSlug: string; sectionSlug: string };
-}
+}) {
+  const { courseSlug, sectionSlug } = params;
 
-export default async function SectionPage({ params }: SectionPageProps) {
-  const { courseSlug, sectionSlug } = await params;
-
-  // 1️⃣ Fetch section & course data from DatoCMS
+  // 1️⃣ Fetch data
   const data = await getSectionDeep(courseSlug, sectionSlug);
   if (!data) return notFound();
 
-  // 2️⃣ Get session
+  // 2️⃣ Session
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return notFound();
 
-  // 3️⃣ Connect to MongoDB
+  // 3️⃣ DB
   await connectDB();
 
-  // 4️⃣ Get enrollment by user ID and courseSlug (through populated Course model)
+  // 4️⃣ Enrollment
   const enrollment = await Enrollment.findOne({ userId: session.user.id })
-    .populate("courseId") // will include full Course document
+    .populate("courseId")
     .lean();
 
-  if (!enrollment || !enrollment.courseId) {
-    console.warn("⚠️ No enrollment or missing courseId for this user");
-    return notFound();
-  }
+  if (!enrollment || !enrollment.courseId) return notFound();
 
-  // 5️⃣ Fetch UserProgress by courseId (from Mongo Course model)
+  // 5️⃣ Progress
   const userProgress = await UserProgress.findOne({
     userId: session.user.id,
     courseId: enrollment.courseId._id,
   }).lean();
 
-  // 6️⃣ Render client page
+  // 6️⃣ Render
   return (
     <SectionClientPage
       course={data.course}

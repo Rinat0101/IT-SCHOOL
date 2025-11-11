@@ -26,7 +26,7 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   await connectDB();
   const session = await getServerSession(authOptions);

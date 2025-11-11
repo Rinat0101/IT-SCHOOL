@@ -30,7 +30,7 @@ export async function PATCH(req: NextRequest) {
         progress.completedLessons.push(lessonId);
       }
     } else {
-      progress.completedLessons = progress.completedLessons.filter((id) => id !== lessonId);
+      progress.completedLessons = progress.completedLessons.filter((id: string) => id !== lessonId);
     }
 
     await progress.save();

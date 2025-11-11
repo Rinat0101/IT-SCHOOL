@@ -5,9 +5,9 @@ import Enrollment from "@/models/CourseEnrollment";
 // PATCH route for updating enrollment access level
 export async function PATCH(
     request: NextRequest,
-    context: { params: { id: string } }
+    { params }: any
 ) {
-    const { id } = context.params;
+    const { id } = params;
 
   try {
     await connectDB();

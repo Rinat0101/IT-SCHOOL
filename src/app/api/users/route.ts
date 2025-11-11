@@ -4,8 +4,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import connectDB from "@/lib/mongoose";
 import User from "@/models/User";
+import bcrypt from "bcryptjs"; // ✅ FIXED: use bcryptjs instead of bcrypt
 
-//✅ POST (create user)
+// ✅ POST (create user)
 export async function POST(req: NextRequest) {
   await connectDB();
 
@@ -19,6 +20,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Check for existing user
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return NextResponse.json(
@@ -27,8 +29,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Hash password using bcryptjs
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Create user
     const newUser = await User.create({
       name,
       lastName: lastName || "",
@@ -42,7 +46,7 @@ export async function POST(req: NextRequest) {
       {
         success: true,
         user: {
-          id: newUser._id,
+          id: newUser._id.toString(),
           name: newUser.name,
           email: newUser.email,
           role: newUser.role,
@@ -56,9 +60,12 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// ✅ GET (admin load list of users)
 export async function GET() {
   try {
     await connectDB();
+
+    // IMPORTANT: Must pass authOptions
     const session = await getServerSession(authOptions);
 
     if (!session) {

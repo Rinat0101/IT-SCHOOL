@@ -10,7 +10,7 @@ import UserProgress from "@/models/UserProgress";
 export default async function CoursePage({
   params,
 }: {
-  params: { courseSlug: string };
+  params: any;
 }) {
   // ✅ Ensure user is logged in
   const session = await getServerSession(authOptions);

@@ -3,10 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import connectDB from "@/lib/mongoose";
-import User from "@/models/User";
-import bcrypt from "bcryptjs"; // ✅ FIXED: use bcryptjs instead of bcrypt
+import User, { IUser } from "@/models/User";
+import bcrypt from "bcryptjs";
+import type { HydratedDocument } from "mongoose";
 
-// ✅ POST (create user)
+// =======================
+// 🚀 POST — Create User
+// =======================
 export async function POST(req: NextRequest) {
   await connectDB();
 
@@ -20,7 +23,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check for existing user
+    // Check for duplicates
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return NextResponse.json(
@@ -29,11 +32,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Hash password using bcryptjs
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
-    const newUser = await User.create({
+    // Create user — strongly typed with HydratedDocument<IUser>
+    const created: HydratedDocument<IUser> = await User.create({
       name,
       lastName: lastName || "",
       email,
@@ -46,10 +49,10 @@ export async function POST(req: NextRequest) {
       {
         success: true,
         user: {
-          id: newUser._id.toString(),
-          name: newUser.name,
-          email: newUser.email,
-          role: newUser.role,
+          id: created._id.toString(),
+          name: created.name,
+          email: created.email,
+          role: created.role,
         },
       },
       { status: 201 }
@@ -60,12 +63,12 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ✅ GET (admin load list of users)
+// =======================
+// 🚀 GET — Admin: Fetch users
+// =======================
 export async function GET() {
   try {
     await connectDB();
-
-    // IMPORTANT: Must pass authOptions
     const session = await getServerSession(authOptions);
 
     if (!session) {
@@ -75,11 +78,7 @@ export async function GET() {
     const users = await User.find()
       .populate({
         path: "enrollments",
-        populate: {
-          path: "courseId",
-          model: "Course",
-          select: "name",
-        },
+        populate: { path: "courseId", model: "Course", select: "name" },
       })
       .select("-password -__v");
 

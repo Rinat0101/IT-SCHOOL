@@ -1,13 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/mongoose";
 import Enrollment from "@/models/CourseEnrollment";
 
 // PATCH route for updating enrollment access level
 export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
+    request: NextRequest,
+    context: { params: { id: string } }
 ) {
-  const { id } = params;
+    const { id } = context.params;
 
   try {
     await connectDB();

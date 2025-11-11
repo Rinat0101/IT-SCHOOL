@@ -4,7 +4,7 @@ import Enrollment from "@/models/CourseEnrollment";
 
 export async function PATCH(
   req: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Record<string, string> } 
 ) {
   const { id } = context.params;
 

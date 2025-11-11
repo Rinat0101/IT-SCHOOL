@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getCourse } from "@/lib/datocms";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/authOptions";
 import Breadcrumbs, { Crumb } from "@/app/path";
 import CourseProgress from "@/app/courseProgress";
 import connectDB from "@/lib/mongoose";

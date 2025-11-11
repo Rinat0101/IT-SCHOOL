@@ -3,7 +3,7 @@ import connectDB from "@/lib/mongoose";
 import LabSubmission from "@/models/LabSubmission";
 import Enrollment from "@/models/CourseEnrollment";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/authOptions";
 
 // 🟢 CREATE or UPDATE lab submission
 export async function POST(req: NextRequest) {

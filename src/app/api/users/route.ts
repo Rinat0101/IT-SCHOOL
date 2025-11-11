@@ -35,8 +35,8 @@ export async function POST(req: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user — strongly typed with HydratedDocument<IUser>
-    const created: HydratedDocument<IUser> = await User.create({
+    // Create user — strongly typed
+    const created = await User.create({
       name,
       lastName: lastName || "",
       email,
@@ -45,18 +45,15 @@ export async function POST(req: NextRequest) {
       language: language || "en",
     });
 
-    return NextResponse.json(
-      {
-        success: true,
-        user: {
-          id: created._id.toString(),
-          name: created.name,
-          email: created.email,
-          role: created.role,
-        },
-      },
-      { status: 201 }
-    );
+    // ✅ Fix: cast _id to ObjectId (or string) explicitly
+    const userResponse = {
+      id: created._id.toString(),
+      name: created.name,
+      email: created.email,
+      role: created.role,
+    };
+
+    return NextResponse.json({ success: true, user: userResponse }, { status: 201 });
   } catch (error) {
     console.error("❌ Error creating user:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

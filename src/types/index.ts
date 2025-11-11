@@ -30,6 +30,8 @@ export type Course = {
   language: LanguageCode;
   coverImage?: { url: string };
   url: string;
+  startDate?: string | null; 
+  endDate?: string | null;   
 
   sections: Section[];
 };

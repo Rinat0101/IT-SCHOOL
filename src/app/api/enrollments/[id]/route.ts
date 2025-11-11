@@ -4,9 +4,9 @@ import Enrollment from "@/models/CourseEnrollment";
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
-  const { id } = params;
+  const { id } = context.params;
 
   try {
     await connectDB();

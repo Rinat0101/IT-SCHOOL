@@ -10,7 +10,7 @@ import SectionClientPage from "./components/SectionClientPage";
 export default async function SectionPage({
   params,
 }: {
-  params: { courseSlug: string; sectionSlug: string };
+  params: any;
 }) {
   const { courseSlug, sectionSlug } = params;
 

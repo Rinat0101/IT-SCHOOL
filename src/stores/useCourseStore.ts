@@ -17,7 +17,7 @@ type CourseStore = {
 
   // ====== Completion Sync ======
   completedLessons: string[];
-  setCompletedLessons: (lessons: string[]) => void;
+  setCompletedLessons: (lessonsOrUpdater: string[] | ((prev: string[]) => string[])) => void;
   toggleLessonCompletion: (lessonId: string, completed: boolean) => void;
 
   // ====== Fetchers ======
@@ -52,7 +52,13 @@ export const useCourseStore = create<CourseStore>((set) => ({
 
   // ─── New: Global Lesson Completion ───
   completedLessons: [],
-  setCompletedLessons: (lessons) => set({ completedLessons: lessons }),
+  setCompletedLessons: (lessonsOrUpdater) =>
+    set((state) => ({
+      completedLessons:
+        typeof lessonsOrUpdater === "function"
+          ? lessonsOrUpdater(state.completedLessons)
+          : lessonsOrUpdater,
+    })),
   toggleLessonCompletion: (lessonId, completed) =>
     set((state) => {
       const updated = completed
@@ -81,7 +87,6 @@ export const useCourseStore = create<CourseStore>((set) => ({
 
   // ─── Fetch Module Structure (weeks → days → lessons) ───
   fetchModuleStructure: async (module) => {
-    console.log("🟣 fetchModuleStructure called with:", module);
     if (!module?.id) {
       console.warn("⚠️ No module ID provided. Skipping fetch.");
       return;

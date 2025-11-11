@@ -117,7 +117,6 @@ export default function LessonPage({
               currentLessonSlug={lesson.slug}
               currentDayTitle={cleanedDayTitle}
               sectionHref={`/courses/${courseSlug}/${sectionSlug}`}
-              completedLessons={completedLessons}
             />
           </aside>
 
@@ -156,8 +155,6 @@ export default function LessonPage({
                       <CompletedButton
                         lessonId={lesson.id}
                         courseId={courseId}
-                        isCompleted={completedLessons.includes(lesson.id)}
-                        onToggle={handleToggleLesson}
                       />
                     </div>
                   </>

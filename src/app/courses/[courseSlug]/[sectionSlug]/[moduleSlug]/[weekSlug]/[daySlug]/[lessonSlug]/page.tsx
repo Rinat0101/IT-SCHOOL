@@ -1,10 +1,8 @@
-export default function HomePage({ params }: { params?: any }) {
-  console.log("🌍 Page Params:", params);
-
-  return (
-    <main>
-      <h1>Hello from root</h1>
-      <pre>{JSON.stringify(params, null, 2)}</pre>
-    </main>
-  );
+// GOOD – async page with direct params access
+export default async function Page({
+  params,
+}: {
+  params: { courseSlug: string; sectionSlug: string };
+}) {
+  return <div>Hello</div>;
 }

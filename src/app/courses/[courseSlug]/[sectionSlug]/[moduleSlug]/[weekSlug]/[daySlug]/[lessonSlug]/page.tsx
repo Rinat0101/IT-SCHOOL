@@ -1,88 +1,10 @@
-import { notFound, redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
-
-import connectDB from "@/lib/mongoose";
-import Enrollment from "@/models/CourseEnrollment";
-import Course from "@/models/Course";
-import type { ICourse } from "@/models/Course";
-import type { IEnrollment } from "@/models/CourseEnrollment";
-import UserProgress from "@/models/UserProgress";
-import type { IUserProgress } from "@/models/UserProgress";
-import { getLessonBySlug } from "@/lib/datocms";
-
-import LessonPage from "./LessonPage";
-
-// ✅ TEMP: use generic type for debugging
-export default async function Page({
-  params,
-}: {
-  params: {
-    lessonSlug: string;
-    courseSlug: string;
-    sectionSlug: string;
-    moduleSlug: string;
-    weekSlug: string;
-    daySlug: string;
-  };
-}) {
-  // ✅ Move the log inside the function
-  console.log("PARAMS IN LESSON PAGE:", params);
-
-  const session = await getServerSession(authOptions);
-  if (!session) redirect("/login");
-
-  const {
-    lessonSlug,
-    courseSlug,
-    sectionSlug,
-    moduleSlug,
-    weekSlug,
-    daySlug,
-  } = params;
-
-  await connectDB();
-
-  const data = await getLessonBySlug(lessonSlug);
-  if (!data?.lesson || !data.day) notFound();
-
-  const courseDoc = await Course.findOne({ datoCmsId: data.courseId }).lean<ICourse>();
-  if (!courseDoc) {
-    console.warn("⚠️ No matching Course found for datoCmsId:", data.courseId);
-    redirect("/courses");
-  }
-
-  const enrollment = await Enrollment.findOne({
-    userId: session.user.id,
-    courseId: courseDoc._id,
-  }).lean<IEnrollment>();
-
-  if (!enrollment) {
-    console.warn("⚠️ No enrollment found for user:", session.user.id);
-    redirect("/courses");
-  }
-
-  const progress = await UserProgress.findOne({
-    userId: session.user.id,
-    courseId: courseDoc._id,
-  }).lean<IUserProgress>();
-
-  const completedLessons: string[] = progress?.completedLessons ?? [];
-
-  const baseHref = `/courses/${courseSlug}/${sectionSlug}/${moduleSlug}/${weekSlug}/${daySlug}`;
+export default function HomePage({ params }: { params?: any }) {
+  console.log("🌍 Page Params:", params);
 
   return (
-    <LessonPage
-      lesson={data.lesson}
-      day={data.day}
-      courseId={courseDoc._id.toString()}
-      courseSlug={courseSlug}
-      courseTitle={data.courseTitle ?? ""}
-      sectionSlug={sectionSlug}
-      sectionTitle={data.sectionTitle ?? ""}
-      baseHref={baseHref}
-      enrollmentId={enrollment._id.toString()}
-      completedLessons={completedLessons}
-    />
+    <main>
+      <h1>Hello from root</h1>
+      <pre>{JSON.stringify(params, null, 2)}</pre>
+    </main>
   );
 }

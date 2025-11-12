@@ -13,7 +13,10 @@ import { getLessonBySlug } from "@/lib/datocms";
 
 import LessonPage from "./LessonPage";
 
-type Params = {
+// ✅ TEMP: use generic type for debugging
+export default async function Page({
+  params,
+}: {
   params: {
     lessonSlug: string;
     courseSlug: string;
@@ -22,9 +25,10 @@ type Params = {
     weekSlug: string;
     daySlug: string;
   };
-};
+}) {
+  // ✅ Move the log inside the function
+  console.log("PARAMS IN LESSON PAGE:", params);
 
-export default async function Page({ params }: Params) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
@@ -37,21 +41,17 @@ export default async function Page({ params }: Params) {
     daySlug,
   } = params;
 
-  // 🔌 Connect to MongoDB
   await connectDB();
 
-  // 1️⃣ Fetch lesson data from DatoCMS
   const data = await getLessonBySlug(lessonSlug);
   if (!data?.lesson || !data.day) notFound();
 
-  // 2️⃣ Find matching course in MongoDB (by datoCmsId)
   const courseDoc = await Course.findOne({ datoCmsId: data.courseId }).lean<ICourse>();
   if (!courseDoc) {
     console.warn("⚠️ No matching Course found for datoCmsId:", data.courseId);
     redirect("/courses");
   }
 
-  // 3️⃣ Check if user is enrolled
   const enrollment = await Enrollment.findOne({
     userId: session.user.id,
     courseId: courseDoc._id,
@@ -62,7 +62,6 @@ export default async function Page({ params }: Params) {
     redirect("/courses");
   }
 
-  // 4️⃣ Get progress (completed lessons)
   const progress = await UserProgress.findOne({
     userId: session.user.id,
     courseId: courseDoc._id,
@@ -70,10 +69,8 @@ export default async function Page({ params }: Params) {
 
   const completedLessons: string[] = progress?.completedLessons ?? [];
 
-  // 5️⃣ Build baseHref
   const baseHref = `/courses/${courseSlug}/${sectionSlug}/${moduleSlug}/${weekSlug}/${daySlug}`;
 
-  // 6️⃣ Render LessonPage
   return (
     <LessonPage
       lesson={data.lesson}

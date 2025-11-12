@@ -2,11 +2,15 @@ import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 
+import connectDB from "@/lib/mongoose";
 import Enrollment from "@/models/CourseEnrollment";
 import Course from "@/models/Course";
+import type { ICourse } from "@/models/Course";
+import type { IEnrollment } from "@/models/CourseEnrollment";
 import UserProgress from "@/models/UserProgress";
-
+import type { IUserProgress } from "@/models/UserProgress";
 import { getLessonBySlug } from "@/lib/datocms";
+
 import LessonPage from "./LessonPage";
 
 interface Params {
@@ -24,42 +28,52 @@ export default async function Page({ params }: Params) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
-  const { lessonSlug, courseSlug, sectionSlug, moduleSlug, weekSlug, daySlug } = params;
+  const {
+    lessonSlug,
+    courseSlug,
+    sectionSlug,
+    moduleSlug,
+    weekSlug,
+    daySlug,
+  } = params;
 
-  // 1) Fetch lesson from DatoCMS
+  // 🔌 Connect to MongoDB
+  await connectDB();
+
+  // 1️⃣ Fetch lesson data from DatoCMS
   const data = await getLessonBySlug(lessonSlug);
-  if (!data?.lesson || !data.day) return notFound();
+  if (!data?.lesson || !data.day) notFound();
 
-  // 2) Find matching course in MongoDB (linked via DatoCMS ID)
-  const courseDoc = await Course.findOne({ datoCmsId: data.courseId });
+  // 2️⃣ Find matching course in MongoDB (by datoCmsId)
+  const courseDoc = await Course.findOne({ datoCmsId: data.courseId }).lean<ICourse>();
   if (!courseDoc) {
-    console.warn("⚠️ No matching Course found in Mongo for datoCmsId:", data.courseId);
+    console.warn("⚠️ No matching Course found for datoCmsId:", data.courseId);
     redirect("/courses");
   }
 
-  // 3) Check enrollment
+  // 3️⃣ Check if user is enrolled
   const enrollment = await Enrollment.findOne({
     userId: session.user.id,
     courseId: courseDoc._id,
-  });
+  }).lean<IEnrollment>();
 
   if (!enrollment) {
-    console.warn("⚠️ No enrollment found for user in course");
+    console.warn("⚠️ No enrollment found for user:", session.user.id);
     redirect("/courses");
   }
 
-  // 4) Get completed lessons from UserProgress
+  // 4️⃣ Get progress (completed lessons)
   const progress = await UserProgress.findOne({
     userId: session.user.id,
     courseId: courseDoc._id,
-  });
+  }).lean<IUserProgress>();
 
-  const completedLessons = progress?.completedLessons ?? [];
+  const completedLessons: string[] = progress?.completedLessons ?? [];
 
-  // 5) Build baseHref
+  // 5️⃣ Build baseHref
   const baseHref = `/courses/${courseSlug}/${sectionSlug}/${moduleSlug}/${weekSlug}/${daySlug}`;
 
-  // 6) Render LessonPage
+  // 6️⃣ Render LessonPage
   return (
     <LessonPage
       lesson={data.lesson}

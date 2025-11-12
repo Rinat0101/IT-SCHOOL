@@ -1,9 +1,17 @@
 // models/UserProgress.ts
-import mongoose, { Schema, Document, model, models } from "mongoose";
 
+import mongoose, {
+  Schema,
+  Document,
+  model,
+  models,
+  Types,
+} from "mongoose";
+
+// 🟢 Strong type for userId and courseId
 export interface IUserProgress extends Document {
-  userId: Schema.Types.ObjectId;
-  courseId: Schema.Types.ObjectId;
+  userId: Types.ObjectId;
+  courseId: Types.ObjectId;
   completedLessons: string[];
   createdAt: Date;
   updatedAt: Date;
@@ -20,8 +28,10 @@ const UserProgressSchema = new Schema<IUserProgress>(
   }
 );
 
-// ✅ Prevent duplicate (user + course) entries
+// ✅ Prevent duplicate progress per user + course
 UserProgressSchema.index({ userId: 1, courseId: 1 }, { unique: true });
 
-export default models.UserProgress ||
-  model<IUserProgress>("UserProgress", UserProgressSchema);
+const UserProgress =
+  models.UserProgress || model<IUserProgress>("UserProgress", UserProgressSchema);
+
+export default UserProgress;

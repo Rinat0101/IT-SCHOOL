@@ -1,5 +1,6 @@
 import mongoose, { Types, Schema, Document } from "mongoose";
 import bcrypt from "bcryptjs";
+import { IEnrollment } from "./CourseEnrollment";
 
 export interface IUser extends Document {
   _id: Types.ObjectId;
@@ -15,8 +16,8 @@ export interface IUser extends Document {
   createdAt: Date;
   updatedAt: Date;
 
-  // 🔹 New: Enrollments
-  enrollments?: mongoose.Types.ObjectId[];
+  // ✅ Changed this
+  enrollments?: IEnrollment[];
 
   comparePassword(candidatePassword: string): Promise<boolean>;
 }

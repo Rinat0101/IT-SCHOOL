@@ -4,6 +4,7 @@ import connectDB from "@/lib/mongoose";
 import User from "@/models/User";
 import "@/models/CourseEnrollment";
 import type { IUser } from "@/models/User";
+import type { IEnrollment } from "@/models/CourseEnrollment";
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
@@ -20,10 +21,10 @@ export const authOptions: NextAuthOptions = {
 
         await connectDB();
 
-        const user = await User.findOne({ email: credentials.email }).populate({
+        const user = (await User.findOne({ email: credentials.email }).populate({
           path: "enrollments",
           populate: { path: "courseId" },
-        }) as IUser | null;
+        })) as IUser | null;
 
         if (!user) return null;
 
@@ -35,7 +36,9 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: `${user.name} ${user.lastName}`.trim(),
           role: user.role,
-          enrollments: Array.isArray(user.enrollments) ? user.enrollments : [],
+          enrollments: Array.isArray(user.enrollments)
+            ? (user.enrollments as IEnrollment[])
+            : [],
         };
       },
     }),
@@ -46,7 +49,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
-        token.enrollments = (user as any).enrollments ?? [];
+        token.enrollments = (user as { enrollments: IEnrollment[] }).enrollments ?? [];
       }
       return token;
     },
@@ -55,7 +58,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as "student" | "admin";
-        session.user.enrollments = token.enrollments ?? [];
+        session.user.enrollments = (token.enrollments ?? []) as IEnrollment[];
       }
       return session;
     },

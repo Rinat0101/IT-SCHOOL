@@ -1,8 +1,10 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, Types } from "mongoose";
 
+// Define base fields
 export interface ICourse extends Document {
-  datoCmsId: string;   
-  slug: string;    
+  _id: Types.ObjectId;
+  datoCmsId: string;
+  slug: string;
   name: string;
   enabled: boolean;
   language?: string;

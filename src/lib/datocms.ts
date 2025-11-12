@@ -114,13 +114,14 @@ export async function getCourse(slug: string): Promise<Course | null> {
         id
         name
         slug
+        url 
         enabled
         language
       }
     }
   `;
   const rCourse = await client.request<{
-    course: { id: string; name: string; slug: string; enabled: boolean; language: string } | null;
+    course: { id: string; name: string; slug: string;  url: string; enabled: boolean; language: string } | null;
   }>(qCourse, { slug });
 
   const base = rCourse.course;
@@ -259,6 +260,7 @@ export async function getCourse(slug: string): Promise<Course | null> {
     id: base.id,
     name: base.name,
     slug: base.slug,
+    url: base.url, // ✅ add this line
     enabled: base.enabled,
     language: base.language,
     sections: sectionsWithModules.map((s) => ({
@@ -267,6 +269,7 @@ export async function getCourse(slug: string): Promise<Course | null> {
         id: base.id,
         name: base.name,
         slug: base.slug,
+        url: base.url, // ✅ also add here
         enabled: base.enabled,
         language: base.language,
       } as Course,
@@ -763,6 +766,7 @@ type GqlLessonResp = {
     weight?: number | null;
     content: any[];
     extraResources?: { title: string; url?: string | null }[] | null;
+    labDescription?: string | null;
     day: {
       id: string;
       title: string;
@@ -810,6 +814,7 @@ export async function getLessonBySlug(lessonSlug: string): Promise<{
     weight?: number | null;
     content: DatoCmsLessonBlock[];
     extraResources?: ExtraResourceBlock[];
+    labDescription?: string | null;
   } | null;
   day: {
     id: string;

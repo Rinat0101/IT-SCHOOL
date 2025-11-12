@@ -1,9 +1,11 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, Types } from "mongoose";
 import "@/models/Course";
 
+// ✅ Explicitly define _id type and clean interface
 export interface IEnrollment extends Document {
-  userId: mongoose.Types.ObjectId;   // reference to User
-  courseId: mongoose.Types.ObjectId; // reference to Course
+  _id: Types.ObjectId; // <-- Fix: make _id explicitly typed
+  userId: Types.ObjectId;   // reference to User
+  courseId: Types.ObjectId; // reference to Course
   startDate: Date;
   endDate: Date;
   status: "active" | "completed" | "cancelled";
@@ -14,7 +16,7 @@ export interface IEnrollment extends Document {
     deadline?: Date;
   };
 
-  // 🟣 NEW: Access control
+  // 🟣 Access control
   accessLevel: "limited" | "full";
 
   // Optional: to track when it was upgraded
@@ -37,8 +39,6 @@ const EnrollmentSchema = new Schema<IEnrollment>(
       location: String,
       deadline: Date,
     },
-
-    // 🔒 New access level control
     accessLevel: {
       type: String,
       enum: ["limited", "full"],
@@ -49,6 +49,9 @@ const EnrollmentSchema = new Schema<IEnrollment>(
   { timestamps: true }
 );
 
-// ⚠️ Avoid recompilation errors in Next.js
-export default mongoose.models.Enrollment ||
+// ✅ Fix Next.js hot-reload issue
+const Enrollment =
+  mongoose.models.Enrollment ||
   mongoose.model<IEnrollment>("Enrollment", EnrollmentSchema);
+
+export default Enrollment;

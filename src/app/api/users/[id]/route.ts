@@ -8,9 +8,9 @@ import bcrypt from "bcryptjs";
 // ✅ GET a single user
 export async function GET(
   req: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
-  const { id } = await context.params;
+  const { id } = await params;
   await connectDB();
 
   const session = await getServerSession(authOptions);
@@ -37,9 +37,9 @@ export async function GET(
 // ✅ PATCH (update user)
 export async function PATCH(
   req: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
-  const { id } = await context.params;
+  const { id } = await params;
   await connectDB();
 
   const session = await getServerSession(authOptions);
@@ -98,9 +98,9 @@ export async function PATCH(
 // ✅ DELETE user (admin only)
 export async function DELETE(
   req: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
-  const { id } = await context.params; // 🟣 await params for Next.js 15
+  const { id } = await params; // 🟣 await params for Next.js 15
   await connectDB();
 
   const session = await getServerSession(authOptions);

@@ -5,12 +5,17 @@ import connectDB from "@/lib/mongoose";
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
 
+function getIdFromRequest(req: NextRequest): string | null {
+  const url = new URL(req.url);
+  const id = url.pathname.split("/").pop();
+  return id || null;
+}
+
 // ✅ GET a single user
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const { id } = params;
+export async function GET(req: NextRequest) {
+  const id = getIdFromRequest(req);
+  if (!id) return NextResponse.json({ error: "Missing ID" }, { status: 400 });
+
   await connectDB();
 
   const session = await getServerSession(authOptions);
@@ -18,11 +23,7 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Allow admin OR same user
-  if (
-    session.user.role !== "admin" &&
-    session.user.id.toString() !== id.toString()
-  ) {
+  if (session.user.role !== "admin" && session.user.id !== id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -34,12 +35,11 @@ export async function GET(
   return NextResponse.json(user);
 }
 
-// ✅ PATCH (update user)
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const { id } = params;
+// ✅ PATCH
+export async function PATCH(req: NextRequest) {
+  const id = getIdFromRequest(req);
+  if (!id) return NextResponse.json({ error: "Missing ID" }, { status: 400 });
+
   await connectDB();
 
   const session = await getServerSession(authOptions);
@@ -47,29 +47,16 @@ export async function PATCH(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Only admin or self
-  if (
-    session.user.role !== "admin" &&
-    session.user.id.toString() !== id.toString()
-  ) {
+  if (session.user.role !== "admin" && session.user.id !== id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const body = await req.json();
   const updateData: Record<string, any> = {};
 
-  // Fields allowed to update
   const allowedFields = [
-    "name",
-    "lastName",
-    "email",
-    "password",
-    "role",
-    "access",
-    "github",
-    "linkedin",
-    "personalWebsite",
-    "profilePicture",
+    "name", "lastName", "email", "password", "role", "access",
+    "github", "linkedin", "personalWebsite", "profilePicture",
   ];
 
   for (const key of allowedFields) {
@@ -78,7 +65,6 @@ export async function PATCH(
     }
   }
 
-  // Hash password if changed
   if (updateData.password) {
     updateData.password = await bcrypt.hash(updateData.password, 10);
   }
@@ -95,12 +81,11 @@ export async function PATCH(
   return NextResponse.json(updatedUser);
 }
 
-// ✅ DELETE user (admin only)
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const { id } = params; // 🟣 await params for Next.js 15
+// ✅ DELETE
+export async function DELETE(req: NextRequest) {
+  const id = getIdFromRequest(req);
+  if (!id) return NextResponse.json({ error: "Missing ID" }, { status: 400 });
+
   await connectDB();
 
   const session = await getServerSession(authOptions);

@@ -13,18 +13,19 @@ import { getLessonBySlug } from "@/lib/datocms";
 
 import LessonPage from "./LessonPage";
 
-export default async function Page({
-  params,
-}: {
-  params: {
-    lessonSlug: string;
-    courseSlug: string;
-    sectionSlug: string;
-    moduleSlug: string;
-    weekSlug: string;
-    daySlug: string;
-  };
-}) {
+export default async function Page(
+  props: Promise<{
+    params: {
+      lessonSlug: string;
+      courseSlug: string;
+      sectionSlug: string;
+      moduleSlug: string;
+      weekSlug: string;
+      daySlug: string;
+    };
+  }>
+) {
+  const { params } = await props;
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 

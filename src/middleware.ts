@@ -15,12 +15,12 @@ export function middleware(request: NextRequest) {
     return;
   }
 
-  // Redirect / to /en
-  if (pathname === '/') {
-    const url = request.nextUrl.clone();
-    url.pathname = '/en';
-    return NextResponse.redirect(url);
-  }
+  // // Redirect / to /en
+  // if (pathname === '/') {
+  //   const url = request.nextUrl.clone();
+  //   url.pathname = '/en';
+  //   return NextResponse.redirect(url);
+  // }
 }
 
 export const config = {

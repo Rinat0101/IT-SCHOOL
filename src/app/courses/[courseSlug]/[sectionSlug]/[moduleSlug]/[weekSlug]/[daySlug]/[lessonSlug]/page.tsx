@@ -13,7 +13,9 @@ import { getLessonBySlug } from "@/lib/datocms";
 
 import LessonPage from "./LessonPage";
 
-interface Params {
+export default async function Page({
+  params,
+}: {
   params: {
     lessonSlug: string;
     courseSlug: string;
@@ -22,9 +24,7 @@ interface Params {
     weekSlug: string;
     daySlug: string;
   };
-}
-
-export default async function Page({ params }: Params) {
+}) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 

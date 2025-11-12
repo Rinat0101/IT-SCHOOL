@@ -191,7 +191,6 @@ const ModuleWrapper = ({ enrollment, userProgress }: ModuleWrapperProps) => {
                     weekSlug={weekSlug!}
                     daySlug={day.slug}
                     completedLessons={completedLessons}
-                    enrollment={enrollment}
                   />
                 </div>
               ))}

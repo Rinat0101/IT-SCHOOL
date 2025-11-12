@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import type { HTMLAttributes } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -12,6 +12,10 @@ type Props = {
   content: string;
   className?: string;
 };
+
+type CustomUlProps = HTMLAttributes<HTMLUListElement>;
+type CustomOlProps = HTMLAttributes<HTMLOListElement>;
+type CustomLiProps = HTMLAttributes<HTMLLIElement>;
 
 // --- Helper: parse alt options for images ---
 function parseAltWithOptions(rawAlt?: string) {
@@ -123,71 +127,88 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw]}
-        components={{
-          a: ({ node, ...props }) => (
-            <a
-              {...props}
-              className="text-purple-600 underline hover:text-purple-800 transition-colors"
-              target="_blank"
-              rel="noopener noreferrer"
-            />
-          ),
-          // Headings
-          h1: (props) => <h1 {...props} className="text-3xl font-bold text-[#212B36] mt-6 mb-4" />,
-          h2: (props) => <h2 {...props} className="text-2xl font-semibold text-[#212B36] mt-6 mb-3" />,
-          h3: (props) => <h3 {...props} className="text-xl font-semibold text-[#212B36] mt-5 mb-2" />,
-          h4: (props) => <h4 {...props} className="text-lg font-semibold text-[#212B36] mt-4 mb-2" />,
+        components={
+          {
+            a: (props: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+              <a
+                {...props}
+                className="text-purple-600 underline hover:text-purple-800 transition-colors"
+                target="_blank"
+                rel="noopener noreferrer"
+              />
+            ),
+            // Headings
+            h1: (props: HTMLAttributes<HTMLHeadingElement>) => (
+              <h1 {...props} className="text-3xl font-bold text-[#212B36] mt-6 mb-4" />
+            ),
+            h2: (props: HTMLAttributes<HTMLHeadingElement>) => (
+              <h2 {...props} className="text-2xl font-semibold text-[#212B36] mt-6 mb-3" />
+            ),
+            h3: (props: HTMLAttributes<HTMLHeadingElement>) => (
+              <h3 {...props} className="text-xl font-semibold text-[#212B36] mt-5 mb-2" />
+            ),
+            h4: (props: HTMLAttributes<HTMLHeadingElement>) => (
+              <h4 {...props} className="text-lg font-semibold text-[#212B36] mt-4 mb-2" />
+            ),
 
-          // Lists
-          ul: (props) => (
-            <ul {...props} className="list-disc pl-6 space-y-2 mb-4 text-[15px] leading-7 text-[#1B2633]" />
-          ),
-          ol: (props) => (
-            <ol {...props} className="list-decimal pl-6 space-y-2 mb-4 text-[15px] leading-7 text-[#1B2633]" />
-          ),
-          li: (props) => <li {...props} className="text-[15px] leading-7 text-[#1B2633]" />,
-
-          // Code blocks
-          code({ inline, className, children, ...rest }: any) {
-            const match = /language-(\w+)/.exec(className || "");
-            if (!inline) {
+            // Lists
+            ul: (props: HTMLAttributes<HTMLUListElement>) => (
+              <ul
+                {...props}
+                className="list-disc pl-6 space-y-2 mb-4 text-[15px] leading-7 text-[#1B2633]"
+              />
+            ),
+            ol: (props: HTMLAttributes<HTMLOListElement>) => (
+              <ol
+                {...props}
+                className="list-decimal pl-6 space-y-2 mb-4 text-[15px] leading-7 text-[#1B2633]"
+              />
+            ),
+            li: (props: HTMLAttributes<HTMLLIElement>) => (
+              <li {...props} className="text-[15px] leading-7 text-[#1B2633]" />
+            ),
+            // Code blocks
+            code({ inline, className, children, ...rest }: any) {
+              const match = /language-(\w+)/.exec(className || "");
+              if (!inline) {
+                return (
+                  <div className="my-4 overflow-auto rounded-lg bg-gray-100 border border-gray-200">
+                    <SyntaxHighlighter
+                      style={duotoneLight}
+                      language={match ? match[1] : undefined}
+                      PreTag="div"
+                      showLineNumbers
+                      wrapLines
+                      customStyle={{
+                        margin: 0,
+                        padding: "1rem",
+                        fontSize: "0.9rem",
+                        lineHeight: 1.6,
+                        borderRadius: "0.5rem",
+                        background: "#F8F9FA",
+                        color: "#1B2633",
+                      }}
+                      {...rest}
+                    >
+                      {String(children).replace(/\n$/, "")}
+                    </SyntaxHighlighter>
+                  </div>
+                );
+              }
               return (
-                <div className="my-4 overflow-auto rounded-lg bg-gray-100 border border-gray-200">
-                  <SyntaxHighlighter
-                    style={duotoneLight}
-                    language={match ? match[1] : undefined}
-                    PreTag="div"
-                    showLineNumbers
-                    wrapLines
-                    customStyle={{
-                      margin: 0,
-                      padding: "1rem",
-                      fontSize: "0.9rem",
-                      lineHeight: 1.6,
-                      borderRadius: "0.5rem",
-                      background: "#F8F9FA",
-                      color: "#1B2633",
-                    }}
-                    {...rest}
-                  >
-                    {String(children).replace(/\n$/, "")}
-                  </SyntaxHighlighter>
-                </div>
+                <code
+                  className="px-1 py-0.5 rounded bg-gray-200 text-[#212B36] text-[0.9em]"
+                  {...rest}
+                >
+                  {children}
+                </code>
               );
-            }
-            return (
-              <code
-                className="px-1 py-0.5 rounded bg-gray-200 text-[#212B36] text-[0.9em]"
-                {...rest}
-              >
-                {children}
-              </code>
-            );
-          },
+            },
 
-          // Custom QuizBlock mapping
-          "quiz-block": (props: any) => <QuizBlock {...props} />,
-        } as any}
+            // Custom QuizBlock mapping
+            "quiz-block": (props: any) => <QuizBlock {...props} />,
+          } as any
+        }
       >
         {processed}
       </ReactMarkdown>

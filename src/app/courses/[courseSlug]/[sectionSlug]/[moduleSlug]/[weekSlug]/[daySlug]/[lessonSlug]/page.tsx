@@ -9,7 +9,18 @@ import UserProgress from "@/models/UserProgress";
 import { getLessonBySlug } from "@/lib/datocms";
 import LessonPage from "./LessonPage";
 
-export default async function Page({ params }) {
+interface Params {
+  params: {
+    lessonSlug: string;
+    courseSlug: string;
+    sectionSlug: string;
+    moduleSlug: string;
+    weekSlug: string;
+    daySlug: string;
+  };
+}
+
+export default async function Page({ params }: Params) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
@@ -55,9 +66,9 @@ export default async function Page({ params }) {
       day={data.day}
       courseId={courseDoc._id.toString()}
       courseSlug={courseSlug}
-      courseTitle={data.courseTitle}
+      courseTitle={data.courseTitle ?? ""}
       sectionSlug={sectionSlug}
-      sectionTitle={data.sectionTitle}
+      sectionTitle={data.sectionTitle ?? ""}
       baseHref={baseHref}
       enrollmentId={enrollment._id.toString()}
       completedLessons={completedLessons}

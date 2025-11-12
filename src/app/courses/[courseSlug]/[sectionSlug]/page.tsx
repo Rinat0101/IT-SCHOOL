@@ -7,10 +7,22 @@ import UserProgress from "@/models/UserProgress";
 import { getSectionDeep } from "@/lib/datocms";
 import SectionClientPage from "./components/SectionClientPage";
 
+// ✅ Inline type for populated enrollment
+type PopulatedEnrollment = {
+  _id: string;
+  courseId: {
+    _id: string;
+    name: string;
+    datoCmsId: string;
+  };
+  accessLevel: "limited" | "full";
+  [key: string]: any;
+};
+
 export default async function SectionPage({
   params,
 }: {
-  params: any;
+  params: { courseSlug: string; sectionSlug: string };
 }) {
   const { courseSlug, sectionSlug } = params;
 
@@ -27,8 +39,8 @@ export default async function SectionPage({
 
   // 4️⃣ Enrollment
   const enrollment = await Enrollment.findOne({ userId: session.user.id })
-    .populate("courseId")
-    .lean();
+  .populate("courseId")
+  .lean() as unknown as PopulatedEnrollment;
 
   if (!enrollment || !enrollment.courseId) return notFound();
 

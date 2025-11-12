@@ -10,7 +10,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { id } = await params;
+  const { id } = params;
   await connectDB();
 
   const session = await getServerSession(authOptions);
@@ -39,7 +39,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { id } = await params;
+  const { id } = params;
   await connectDB();
 
   const session = await getServerSession(authOptions);
@@ -100,7 +100,7 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { id } = await params; // 🟣 await params for Next.js 15
+  const { id } = params; // 🟣 await params for Next.js 15
   await connectDB();
 
   const session = await getServerSession(authOptions);

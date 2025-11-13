@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import { useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -113,8 +113,8 @@ function preprocessDirectives(markdown: string): string {
   <div class="md:flex-1 w-full text-[15px] leading-7 text-[#1B2633]">
   ${text
     .trim()
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")   // Bold: **text**
-    .replace(/\*(.+?)\*/g, "<em>$1</em>")               // Italic: *text*
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")   
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
     .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 bg-gray-100 text-gray-800 font-mono rounded-md text-[0.9em]">$1</code>') // Inline code
     .replace(/\n+/g, "<br>")
   }
@@ -175,7 +175,7 @@ markdown = markdown.replace(
         } else {
           // ✅ Add **bold** and inline code support
           const html = segment
-            .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") // ✅ bold support
+            .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
             .replace(
               /`([^`]+)`/g,
               '<code class="px-1 py-0.5 bg-gray-100 text-gray-800 font-mono rounded-md text-[0.9em]">$1</code>'
@@ -232,18 +232,16 @@ markdown = markdown.replace(
         explanation: parsed.explanation || "",
       });
 
-      // ✅ Encode JSON to base64 (safe for HTML, reversible)
       const encoded = btoa(unescape(encodeURIComponent(json)));
-
       return `<quiz-block data-json="${encoded}"></quiz-block>`;
     }
   );
-  // --- Hidden text blocks (e.g. hint, answer, explanation) ---
+  // --- Hidden blocks ---
   markdown = markdown.replace(
-    /:::hidden\s*(type=(\w+))?\s*(color=(\w+))?\s*\n([\s\S]*?)\n:::/gi,
-    (_, _typeRaw, type, _colorRaw, color, text) => {
+    /:::hidden\s*(?:type=(\w+))?\s*(?:color=(\w+))?\s*\n([\s\S]*?)\n:::/gi,
+    (_match, type: string, color: string, bodyText: string) => {
       const title = type ? type.charAt(0).toUpperCase() + type.slice(1) : "Hint";
-      const safeText = encodeURIComponent(text.trim());
+      const safeText = encodeURIComponent(bodyText.trim());
       const safeColor = color || "green";
 
       return `<hidden-text-block data-title="${title}" data-color="${safeColor}" data-text="${safeText}"></hidden-text-block>`;
@@ -251,6 +249,7 @@ markdown = markdown.replace(
   );
   return markdown;
 }
+
 
 // ─────────────────────────────
 // Component
@@ -372,7 +371,14 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
             </h5>
           ),
           // Text elements
-          p: (props) => <p {...props} className="mb-4 text-[15px] leading-7 text-[#1B2633]" />,
+          p: (props) => {
+            // Skip if it’s a CodePen embed (has className 'codepen')
+            if (props?.className?.includes('codepen')) {
+              return <p {...props} />;
+            }
+          
+            return <p {...props} className="mb-4 text-[15px] leading-7 text-[#1B2633]" />;
+          },
           ul: (props) => (
             <ul
               {...props}

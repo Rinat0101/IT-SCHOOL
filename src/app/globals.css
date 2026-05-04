@@ -1,5 +1,17 @@
 @import "tailwindcss";
 
+/* Tailwind v4 dark mode: class-based, manual toggle */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Non-transparent images inside lesson markdown content get a small white halo in
+   dark mode so they don't clash with dark backgrounds. Scoped to lesson content
+   only so it doesn't affect UI icons (check marks, eye toggles, logos, etc.). */
+html.dark .markdown-wrapper img:not([data-no-dark-bg]) {
+  background-color: #ffffff;
+  padding: 4px;
+  border-radius: 6px;
+}
+
 /* Hide Next internal overlays */
 #nprogress, #nprogress .bar,
 #__next-build-watcher,
@@ -49,12 +61,42 @@ body {
   --font-sans: 'Public Sans', sans-serif;
 }
 
-/* If you don't want dark mode to flip colors, keep same values in dark */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #ffffff; /* keep light */
-    --foreground: #212B36; /* keep light text color token */
-  }
+/* Alert directive colors — light defaults, overridden in dark below. */
+:root {
+  --alert-info-bg: #EFF6FF;
+  --alert-info-text: #1E3A8A;
+  --alert-info-border: #93C5FD;
+  --alert-success-bg: #ECFDF5;
+  --alert-success-text: #065F46;
+  --alert-success-border: #6EE7B7;
+  --alert-warning-bg: #FFFBEB;
+  --alert-warning-text: #92400E;
+  --alert-warning-border: #FACC15;
+  --alert-danger-bg: #FEF2F2;
+  --alert-danger-text: #991B1B;
+  --alert-danger-border: #F87171;
+}
+
+/* Dark theme tokens — applied when html.dark */
+html.dark {
+  --background: #0b0f17;
+  --foreground: #E5E7EB;
+  --blue-3: #1e3a5f;
+  --gray-1: #9CA3AF;
+  --gray-2: #E5E7EB;
+
+  --alert-info-bg: #142036;
+  --alert-info-text: #93C5FD;
+  --alert-info-border: #1E3A8A;
+  --alert-success-bg: #0d2a1c;
+  --alert-success-text: #6EE7B7;
+  --alert-success-border: #065F46;
+  --alert-warning-bg: #2a1f08;
+  --alert-warning-text: #FACC15;
+  --alert-warning-border: #92400E;
+  --alert-danger-bg: #2b1414;
+  --alert-danger-text: #F87171;
+  --alert-danger-border: #991B1B;
 }
 
 /* Global text + background */

@@ -5,6 +5,7 @@ import { useCourseStore } from "@/stores/useCourseStore";
 import Breadcrumbs from "@/app/path";
 import ModuleWrapper from "./ModuleWrapper";
 import type { CourseHeader, SectionDeepForPage } from "@/types/index";
+import { cleanTitle } from "@/app/utils/cleanTitles";
 
 interface SectionClientPageProps {
   course: CourseHeader;
@@ -50,16 +51,16 @@ export default function SectionClientPage({
   ]);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-[#0b0f17]">
       <div className="mx-auto max-w-6xl px-6 py-8">
-        <h1 className="text-xl font-bold !text-black mb-4">{section.title}</h1>
+        <h1 className="text-xl font-bold text-black dark:text-gray-100 mb-4">{cleanTitle(section.title)}</h1>
 
         {/* Breadcrumbs */}
         <Breadcrumbs
           items={[
             { label: "Courses", href: "/courses" },
             { label: course.name, href: `/courses/${course.slug}` },
-            { label: section.title },
+            { label: cleanTitle(section.title) },
           ]}
           className="mb-6"
         />

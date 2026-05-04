@@ -44,9 +44,9 @@ console.log(userProgress)
   ];
 
   return (
-    <div className="min-h-screen w-full">
-      <div className="max-w-[1200px] mx-auto px-6 md:px-8 py-8 bg-white">
-        <h1 className="text-xl font-bold text-black mb-4">{course.name}</h1>
+    <div className="min-h-screen w-full bg-white dark:bg-[#0b0f17]">
+      <div className="max-w-[1200px] mx-auto px-6 md:px-8 py-8 bg-white dark:bg-[#0b0f17]">
+        <h1 className="text-xl font-bold text-black dark:text-gray-100 mb-4">{course.name}</h1>
 
         <Breadcrumbs items={items} className="mb-6" />
 

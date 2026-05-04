@@ -1,21 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/authOptions";
 import connectDB from "@/lib/mongoose";
 import UserProgress from "@/models/UserProgress";
 import User from "@/models/User";
 
 export async function PATCH(req: NextRequest) {
   try {
-    const { userId, courseId, lessonId, markAsCompleted } = await req.json();
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    if (!userId || !courseId || !lessonId) {
+    const { courseId, lessonId, markAsCompleted } = await req.json();
+
+    if (!courseId || !lessonId) {
       return NextResponse.json({ error: "Missing required data" }, { status: 400 });
     }
 
     await connectDB();
 
-    // ✅ Convert IDs properly
-    const userObjectId = new mongoose.Types.ObjectId(userId);
+    const userObjectId = new mongoose.Types.ObjectId(session.user.id);
     const courseObjectId = new mongoose.Types.ObjectId(courseId);
 
     // ✅ Find or create progress

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import CourseSectionCard from "@/components/courseSectionCard";
-import GoalsCard from "@/components/GoalsCard";
 import React, { useMemo } from "react";
 import { useCourseStore } from "@/stores/useCourseStore";
 import type { Lesson } from "@/types";
@@ -100,14 +99,14 @@ export default function CourseSectionCardsContainer({
   };
 
   return (
-    <div className="w-full bg-white min-h-screen">
+    <div className="w-full bg-white dark:bg-[#0b0f17] min-h-screen">
       <div className="mx-auto max-w-[1200px] px-6 md:px-8 py-8">
         {courseName && (
-          <h1 className="text-xl font-bold text-[#212B36] mb-4">{courseName}</h1>
+          <h1 className="text-xl font-bold text-[#212B36] dark:text-gray-100 mb-4">{courseName}</h1>
         )}
 
         {/* Sections grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full dialog-shadow rounded-lg p-5 mt-10 bg-white">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full dialog-shadow rounded-lg p-5 mt-10 bg-white dark:bg-[#1a1f29] dark:border dark:border-gray-800">
           {sections?.length ? (
             sections.map((section, idx) => {
               const locked = isSectionLocked(idx);
@@ -144,18 +143,10 @@ export default function CourseSectionCardsContainer({
               );
             })
           ) : (
-            <p className="text-[#6B778C]">No sections available.</p>
+            <p className="text-[#6B778C] dark:text-gray-400">No sections available.</p>
           )}
         </div>
 
-        {/* Goals */}
-        {/* 
-        {enrollment?.goals && (
-          <div className="max-w-xl mx-auto my-10">
-            <GoalsCard goals={enrollment.goals} />
-          </div>
-        )} 
-        */}
       </div>
     </div>
   );

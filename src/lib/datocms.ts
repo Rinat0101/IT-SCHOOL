@@ -130,7 +130,7 @@ export async function getCourse(slug: string): Promise<Course | null> {
   // 2️⃣ Fetch all sections linked to this course
   const qSections = /* GraphQL */ `
     query SectionsByCourse($courseId: ItemId) {
-      allSections(filter: { course: { eq: $courseId } }, orderBy: order_ASC) {
+      allSections(filter: { course: { eq: $courseId } }, orderBy: order_ASC, first: 500) {
         id
         title
         slug
@@ -147,7 +147,7 @@ export async function getCourse(slug: string): Promise<Course | null> {
   const sectionIds = sectionsSorted.map((s) => s.id);
   const qModules = /* GraphQL */ `
     query ModulesBySections($sectionIds: [ItemId]) {
-      allModules(filter: { section: { in: $sectionIds } }) {
+      allModules(filter: { section: { in: $sectionIds } }, first: 500) {
         id
         title
         slug
@@ -171,7 +171,7 @@ export async function getCourse(slug: string): Promise<Course | null> {
   const moduleIds = rModules.allModules.map((m) => m.id);
   const qWeeks = /* GraphQL */ `
     query WeeksByModules($moduleIds: [ItemId]) {
-      allWeeks(filter: { module: { in: $moduleIds } }) {
+      allWeeks(filter: { module: { in: $moduleIds } }, first: 500) {
         id
         title
         slug
@@ -195,7 +195,7 @@ export async function getCourse(slug: string): Promise<Course | null> {
   const weekIds = rWeeks.allWeeks.map((w) => w.id);
   const qDays = /* GraphQL */ `
     query DaysByWeeks($weekIds: [ItemId]) {
-      allDays(filter: { week: { in: $weekIds } }) {
+      allDays(filter: { week: { in: $weekIds } }, first: 500) {
         id
         title
         slug
@@ -219,7 +219,7 @@ export async function getCourse(slug: string): Promise<Course | null> {
   const dayIds = rDays.allDays.map((d) => d.id);
   const qLessons = /* GraphQL */ `
     query LessonsByDays($dayIds: [ItemId]) {
-      allLessons(filter: { day: { in: $dayIds } }) {
+      allLessons(filter: { day: { in: $dayIds } }, first: 500) {
         id
         title
         slug
@@ -388,7 +388,7 @@ export async function getSectionDeep(
     // 2) Modules for section
     const qModules = /* GraphQL */ `
       query ModulesBySection($sectionId: ItemId!) {
-        allModules(filter: { section: { eq: $sectionId } }) {
+        allModules(filter: { section: { eq: $sectionId } }, first: 500) {
           id
           title
           slug
@@ -426,7 +426,7 @@ export async function getSectionDeep(
     const moduleIds = modules.map((m) => m.id);
     const qWeeks = /* GraphQL */ `
       query WeeksByModules($moduleIds: [ItemId]) {
-        allWeeks(filter: { module: { in: $moduleIds } }) {
+        allWeeks(filter: { module: { in: $moduleIds } }, first: 500) {
           id
           title
           slug
@@ -477,7 +477,7 @@ export async function getSectionDeep(
     if (weekIds.length > 0) {
       const qDays = /* GraphQL */ `
         query DaysByWeeks($weekIds: [ItemId]) {
-          allDays(filter: { week: { in: $weekIds } }) {
+          allDays(filter: { week: { in: $weekIds } }, first: 500) {
             id
             title
             slug
@@ -525,7 +525,7 @@ export async function getSectionDeep(
         query LessonsByDays($dayIds: [ItemId]) {
           allLessons(
             filter: { day: { in: $dayIds } }
-            first: 100 
+            first: 500
           ) {
             id
             title
@@ -764,6 +764,7 @@ type GqlLessonResp = {
     isMandatory: boolean;
     order?: number | null;
     weight?: number | null;
+    body?: string | null;
     content: any[];
     extraResources?: { title: string; url?: string | null }[] | null;
     labDescription?: string | null;
@@ -812,6 +813,7 @@ export async function getLessonBySlug(lessonSlug: string): Promise<{
     isMandatory: boolean;
     order?: number | null;
     weight?: number | null;
+    body?: string | null;
     content: DatoCmsLessonBlock[];
     extraResources?: ExtraResourceBlock[];
     labDescription?: string | null;
@@ -987,6 +989,7 @@ export async function getLessonBySlug(lessonSlug: string): Promise<{
         isMandatory: !!l.isMandatory,
         order: l.order ?? null,
         weight: l.weight ?? null,
+        body: l.body ?? null,
         content: (l.content ?? []) as DatoCmsLessonBlock[],
         extraResources: (l.extraResources ?? []) as ExtraResourceBlock[],
         labDescription: l.labDescription ?? null,

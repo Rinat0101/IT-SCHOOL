@@ -17,7 +17,7 @@ const CourseSectionCard: React.FC<CourseSectionCardProps> = ({
   const offset = circumference - (completionPercentage / 100) * circumference;
 
   return (
-    <div className="rounded-2xl border border-gray-300 bg-white p-6 shadow-sm flex flex-col items-center text-center">
+    <div className="rounded-2xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#0f1420] p-6 shadow-sm flex flex-col items-center text-center">
       <div className="relative w-42 h-42 mb-4">
         <svg width="100%" height="100%" viewBox="0 0 100 100">
           <circle
@@ -25,7 +25,7 @@ const CourseSectionCard: React.FC<CourseSectionCardProps> = ({
             cy="50"
             r={radius}
             fill="none"
-            stroke="#E5E7EB" 
+            className="stroke-gray-200 dark:stroke-gray-700"
             strokeWidth={strokeWidth}
           />
           <circle
@@ -48,15 +48,15 @@ const CourseSectionCard: React.FC<CourseSectionCardProps> = ({
           </defs>
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-sm text-gray-500">Completed</span>
-          <span className="text-2xl font-bold text-gray-900">
+          <span className="text-sm text-gray-500 dark:text-gray-400">Completed</span>
+          <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             {completionPercentage}%
           </span>
         </div>
       </div>
 
       <div className="flex items-center justify-between gap-2 mt-2">
-        <h3 className="text-base font-bold text-gray-900">{title}</h3>
+        <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">{title}</h3>
         {iconUrl && (
           <img src={iconUrl} alt="Icon" className="w-5 h-5 opacity-40" />
         )}

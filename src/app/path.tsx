@@ -21,7 +21,7 @@ const Breadcrumbs: React.FC<Props> = ({ items, className = "" }) => {
 
   return (
     <nav aria-label="Breadcrumb" className={`text-sm ${className}`}>
-      <ol className="flex items-center gap-2 text-gray-600">
+      <ol className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
         {items.map((item, i) => {
           const isLast = i === items.length - 1;
 
@@ -31,12 +31,12 @@ const Breadcrumbs: React.FC<Props> = ({ items, className = "" }) => {
                 <button
                   type="button"
                   onClick={() => router.push(item.href!)}
-                  className="hover:text-[#7E22CE] transition-colors"
+                  className="hover:text-[#7E22CE] dark:hover:text-[#F4B8FF] transition-colors"
                 >
                   {item.label}
                 </button>
               ) : (
-                <span className={isLast ? "text-gray-500" : ""}>{item.label}</span>
+                <span className={isLast ? "text-gray-500 dark:text-gray-500" : ""}>{item.label}</span>
               )}
 
               {!isLast && <span className="select-none">&gt;</span>}

@@ -12,16 +12,24 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
 
   return (
     <html lang="en" className="h-full">
-      <body className="m-0 min-h-screen bg-white text-[#212B36] flex flex-col antialiased">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+(function(){try{
+  var t=localStorage.getItem('theme');
+  if(!t){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}
+  if(t==='dark'){document.documentElement.classList.add('dark');}
+}catch(_){}})();`,
+          }}
+        />
+      </head>
+      <body className="m-0 min-h-screen bg-white dark:bg-[#0b0f17] text-[#212B36] dark:text-gray-100 flex flex-col antialiased transition-colors">
         <AuthProvider session={session}>
-          {/* Navbar always on top */}
           <Navbar />
-
-          {/* Main content fills remaining height */}
-          <main className="flex-1 p-0 m-0 bg-white">{children}</main>
+          <main className="flex-1 p-0 m-0 bg-white dark:bg-[#0b0f17]">{children}</main>
         </AuthProvider>
 
-        {/* Load CodePen embed script once globally */}
         <CodepenEmbed />
       </body>
     </html>

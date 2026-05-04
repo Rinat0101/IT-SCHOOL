@@ -1,10 +1,7 @@
-import Image from "next/image";
-
 type Props = {
   title: string;
   description: string;
   buttonText: string;
-  imageUrl?: string;
   url: string;
 };
 
@@ -12,49 +9,25 @@ export default function NonPurchasedCourseCard({
   title,
   description,
   buttonText,
-  imageUrl,
-  url
+  url,
 }: Props) {
   return (
-    <div className="relative flex items-center bg-blue-3 rounded-xl p-6 shadow-light-mode overflow-hidden">
-      {/* Left Side */}
-      <div className="flex-1 min-w-0 relative z-20">
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">{title}</h3>
-        <p className="text-gray-2 mb-4">{description}</p>
-
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-block bg-blue-1 text-white py-2 px-6 rounded-md hover:bg-blue-600 btn-shadow cursor-pointer"
-          style={{
-            position: "relative",
-            zIndex: 30,
-            pointerEvents: "auto",
-          }}
-        >
-          {buttonText}
-        </a>
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group flex items-center justify-between gap-4 rounded-xl px-5 py-4 bg-gradient-to-br from-[#FCF2FF] to-[#F4B8FF]/40 dark:from-[#2a1830] dark:to-[#1f1428] border border-[#F4B8FF]/60 dark:border-[#F4B8FF]/30 shadow-sm hover:shadow-md transition-shadow"
+    >
+      <div className="flex-1 min-w-0">
+        <h3 className="text-base font-semibold text-[#212B36] dark:text-gray-100 truncate">{title}</h3>
+        <p className="text-xs text-[#6B778C] dark:text-gray-400 mt-1 line-clamp-2 leading-snug">
+          {description}
+        </p>
       </div>
-
-      {/* Right Side (Image) */}
-      <div
-        className="ml-6 flex items-center justify-end w-[45%] relative z-10"
-        style={{ pointerEvents: "none" }}
-      >
-        {imageUrl && (
-          <div className="relative w-[420px] h-[150px]">
-            <Image
-              src={imageUrl}
-              alt="Course Illustration"
-              fill
-              className="object-contain w-auto h-auto rounded-md"
-              priority
-              sizes="(max-width: 768px) 100vw, 45vw"
-            />
-          </div>
-        )}
-      </div>
-    </div>
+      <span className="text-[#B923AE] dark:text-[#F4B8FF] font-semibold text-sm whitespace-nowrap inline-flex items-center gap-1 group-hover:gap-2 transition-all">
+        {buttonText}
+        <span aria-hidden>→</span>
+      </span>
+    </a>
   );
 }

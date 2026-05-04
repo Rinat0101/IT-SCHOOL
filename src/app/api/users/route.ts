@@ -11,6 +11,11 @@ import type { HydratedDocument } from "mongoose";
 // 🚀 POST — Create User
 // =======================
 export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== "admin") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   await connectDB();
 
   try {
@@ -70,6 +75,9 @@ export async function GET() {
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (session.user.role !== "admin") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const users = await User.find()

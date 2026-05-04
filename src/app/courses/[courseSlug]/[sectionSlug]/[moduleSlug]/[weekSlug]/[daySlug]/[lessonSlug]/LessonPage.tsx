@@ -4,6 +4,7 @@ import { useEffect, useMemo } from "react";
 import { useCourseStore } from "@/stores/useCourseStore";
 import Breadcrumbs from "@/app/path";
 import LessonBlockRenderer from "./components/LessonBlockRenderer";
+import MarkdownRenderer from "./components/MarkdownRenderer";
 import LessonTopicsSidebar from "./components/LessonTopicsSidebar";
 import DaySideBar from "./components/DaySideBar";
 import ExtraResources from "./components/ExtraResources";
@@ -25,6 +26,7 @@ type MinimalLesson = {
   lessonType: LessonType["lessonType"];
   isMandatory: boolean;
   order?: number | null;
+  body?: string | null;
   content: DatoCmsLessonBlock[];
   extraResources?: ExtraResourceBlock[];
   labDescription?: string | null;
@@ -93,6 +95,7 @@ export default function LessonPage({
   };
 
   const blocks = lesson?.content ?? [];
+  const hasBody = typeof lesson?.body === "string" && lesson.body.trim().length > 0;
   const lessonsSorted = useMemo(
     () =>
       [...(day.lessons ?? [])]
@@ -105,7 +108,7 @@ export default function LessonPage({
   const cleanedDayTitle = cleanTitle(day.title);
 
   return (
-    <div className="w-full bg-white min-h-screen px-4 md:px-6 lg:px-8 py-6">
+    <div className="w-full bg-white dark:bg-[#0b0f17] min-h-screen px-4 md:px-6 lg:px-8 py-6">
       <div className="mx-auto max-w-[1400px]">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* LEFT: Day sidebar */}
@@ -123,8 +126,8 @@ export default function LessonPage({
           {/* MIDDLE: Main lesson content */}
           <div className="flex-1 flex justify-center">
             <div className="w-full max-w-[800px]">
-              <div className="rounded-2xl shadow-md p-6 md:p-8 bg-white">
-                <h1 className="text-3xl font-bold text-[#212B36] mb-4">
+              <div className="rounded-2xl shadow-md p-6 md:p-8 bg-white dark:bg-[#1a1f29] dark:border dark:border-gray-800">
+                <h1 className="text-3xl font-bold text-[#212B36] dark:text-gray-100 mb-4">
                   {cleanedLessonTitle}
                 </h1>
 
@@ -150,7 +153,11 @@ export default function LessonPage({
                   />
                 ) : (
                   <>
-                    <LessonBlockRenderer blocks={blocks} />
+                    {hasBody ? (
+                      <MarkdownRenderer content={lesson.body!} />
+                    ) : (
+                      <LessonBlockRenderer blocks={blocks} />
+                    )}
                     <div className="mt-6 flex justify-center">
                       <CompletedButton
                         lessonId={lesson.id}

@@ -1,13 +1,14 @@
 "use client";
-
-import { useEffect, useRef } from "react";
+import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { duotoneLight } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { duotoneLight, vscDarkPlus } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import QuizBlock from "@/components/QuizBlock";
 import HiddenTextBlock from "@/components/HiddenTextBlock";
+import CodepenBlock from "@/components/CodepenBlock";
+import { useTheme } from "@/hooks/useTheme";
 
 type Props = {
   content: string;
@@ -110,109 +111,104 @@ function preprocessDirectives(markdown: string): string {
   <div class="flex-shrink-0 flex justify-center md:justify-start" style="width:${imgWidth};">
     <img src="${src}" alt="" style="width:100%; height:auto;" />
   </div>
-  <div class="md:flex-1 w-full text-[15px] leading-7 text-[#1B2633]">
+  <div class="md:flex-1 w-full text-[15px] leading-7 text-[#1B2633] dark:text-gray-300">
   ${text
     .trim()
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")   
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 bg-gray-100 text-gray-800 font-mono rounded-md text-[0.9em]">$1</code>') // Inline code
-    .replace(/\n+/g, "<br>")
-  }
+    .replace(
+      /`([^`]+)`/g,
+      '<code class="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-mono rounded-md text-[0.9em]">$1</code>'
+    ) // Inline code
+    .replace(/\n+/g, "<br>")}
   </div>
 </div>`;
     }
   );
 
-// --- Alert boxes (inline + block code support, with bold title + HTML rendering) ---
-markdown = markdown.replace(
-  /:::alert\s+(info|success|warning|danger)\s*\n([\s\S]*?)\n:::/gi,
-  (_, type, body) => {
-    const map = {
-      success: { bg: "#ECFDF5", text: "#065F46", border: "#6EE7B7" },
-      info: { bg: "#EFF6FF", text: "#1E3A8A", border: "#93C5FD" },
-      warning: { bg: "#FFFBEB", text: "#92400E", border: "#FACC15" },
-      danger: { bg: "#FEF2F2", text: "#991B1B", border: "#F87171" },
-    };
+  // --- Alert boxes (inline + block code support, with bold title + HTML rendering) ---
+  markdown = markdown.replace(
+    /:::alert\s+(info|success|warning|danger)\s*\n([\s\S]*?)\n:::/gi,
+    (_, type, body) => {
+      // Colors are CSS variables defined in globals.css; they flip in dark mode.
+      const t = (type || "info").toLowerCase();
+      const preset = {
+        bg: `var(--alert-${t}-bg)`,
+        text: `var(--alert-${t}-text)`,
+        border: `var(--alert-${t}-border)`,
+      };
 
-    const preset = map[type.toLowerCase()] || map.info;
+      const lines = body.trim().split(/\r?\n/);
+      const firstNonEmptyIndex = lines.findIndex((l) => l.trim().length > 0);
 
-    const lines = body.trim().split(/\r?\n/);
-    const firstNonEmptyIndex = lines.findIndex((l) => l.trim().length > 0);
+      let title = "";
+      let rest = "";
 
-    let title = "";
-    let rest = "";
+      if (firstNonEmptyIndex !== -1) {
+        title = lines[firstNonEmptyIndex].trim();
+        rest = lines
+          .slice(firstNonEmptyIndex + 1)
+          .join("\n")
+          .trim();
+      }
 
-    if (firstNonEmptyIndex !== -1) {
-      title = lines[firstNonEmptyIndex].trim();
-      rest = lines.slice(firstNonEmptyIndex + 1).join("\n").trim();
-    }
-
-    const titleWithInlineCode = title
-      ? `<div class="font-semibold mb-2" style="color:${preset.text}">
+      const titleWithInlineCode = title
+        ? `<div class="font-semibold mb-2" style="color:${preset.text}">
           ${title
             .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") // ✅ support for **bold**
             .replace(
               /`([^`]+)`/g,
-              '<code class="px-1 py-0.5 bg-gray-100 text-gray-800 font-mono rounded-md text-[0.9em]">$1</code>'
+              '<code class="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-mono rounded-md text-[0.9em]">$1</code>'
             )}
         </div>`
-      : "";
+        : "";
 
-    const bodyWithBlocks = rest
-      .split(/(```[\s\S]*?```)/g)
-      .map((segment) => {
-        if (/^```/.test(segment)) {
-          const match = /^```(\w+)?\n([\s\S]*?)```$/.exec(segment);
-          if (!match) return segment;
-          const lang = match[1] || "text";
-          const code = match[2].trim();
-          return `
+      const bodyWithBlocks = rest
+        .split(/(```[\s\S]*?```)/g)
+        .map((segment) => {
+          if (/^```/.test(segment)) {
+            const match = /^```(\w+)?\n([\s\S]*?)```$/.exec(segment);
+            if (!match) return segment;
+            const lang = match[1] || "text";
+            const code = match[2].trim();
+            return `
 <div>
 <pre class="text-[0.9rem] leading-6 font-mono overflow-auto my-0 p-2">
     <code class="language-${lang}">${code}</code>
   </pre>
 </div>`;
-        } else {
-          // ✅ Add **bold** and inline code support
-          const html = segment
-            .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-            .replace(
-              /`([^`]+)`/g,
-              '<code class="px-1 py-0.5 bg-gray-100 text-gray-800 font-mono rounded-md text-[0.9em]">$1</code>'
-            )
-            .trim();
+          } else {
+            // ✅ Add **bold** and inline code support
+            const html = segment
+              .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+              .replace(
+                /`([^`]+)`/g,
+                '<code class="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-mono rounded-md text-[0.9em]">$1</code>'
+              )
+              .trim();
 
-          return `<div class="alert-text prose prose-sm" style="color:${preset.text}">${html}</div>`;
-        }
-      })
-      .join("");
+            return `<div class="alert-text prose prose-sm" style="color:${preset.text}">${html}</div>`;
+          }
+        })
+        .join("");
 
-    return `
+      return `
 <div class="rounded-xl border px-5 py-4 my-4 text-[15px] leading-7"
      style="background-color:${preset.bg}; border-color:${preset.border}">
   ${titleWithInlineCode}
   ${bodyWithBlocks}
 </div>`;
-  }
-);
+    }
+  );
 
   // --- CodePen embeds ---
+  // Emit a custom <codepen-block> element which is rendered by a React-owned
+  // wrapper component (see CodepenBlock). This keeps CodePen's iframe-injection
+  // outside React's reconciliation tree.
   markdown = markdown.replace(
     /(codepen:)?https:\/\/codepen\.io\/([^/]+)\/pen\/([a-zA-Z0-9]+)/g,
-    (_, prefix: string, user: string, slug: string) => {
-      const url = `https://codepen.io/${user}/pen/${slug}`;
-      return `
-<p class="codepen"
-   data-height="400"
-   data-default-tab="html,result"
-   data-slug-hash="${slug}"
-   data-user="${user}"
-   style="height:400px;display:flex;align-items:center;justify-content:center;border:1px solid #ccc;margin:1em 0;padding:1em;">
-  <span>See the Pen <a href="${url}">Code Example</a> by ${user}
-  (<a href="https://codepen.io/${user}">@${user}</a>)
-  on <a href="https://codepen.io">CodePen</a>.</span>
-</p>`;
-    }
+    (_, _prefix: string, user: string, slug: string) =>
+      `<codepen-block data-user="${user}" data-slug="${slug}" data-height="400"></codepen-block>`
   );
 
   // --- Quizzes ---
@@ -250,11 +246,12 @@ markdown = markdown.replace(
   return markdown;
 }
 
-
 // ─────────────────────────────
 // Component
 // ─────────────────────────────
 export default function MarkdownRenderer({ content, className = "" }: Props) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const processed = preprocessDirectives(content);
 
   return (
@@ -309,7 +306,7 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
           a: ({ node, ...props }) => (
             <a
               {...props}
-              className="text-purple-600 underline hover:text-purple-800 transition-colors"
+              className="text-purple-600 dark:text-[#F4B8FF] underline hover:text-purple-800 dark:hover:text-purple-300 transition-colors"
               target="_blank"
               rel="noopener noreferrer"
             />
@@ -318,7 +315,7 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
           h1: ({ children, ...rest }) => (
             <h1
               {...rest}
-              className="text-3xl font-bold text-[#212B36] mt-6 mb-4
+              className="text-3xl font-bold text-[#212B36] dark:text-gray-100 mt-6 mb-4
                [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded-md
                [&>code]:bg-gray-100 [&>code]:text-gray-800
                [&>code]:font-mono [&>code]:text-[0.9em]"
@@ -329,7 +326,7 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
           h2: ({ children, ...rest }) => (
             <h2
               {...rest}
-              className="text-2xl font-semibold text-[#212B36] mt-6 mb-3
+              className="text-2xl font-semibold text-[#212B36] dark:text-gray-100 mt-6 mb-3
                [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded-md
                [&>code]:bg-gray-100 [&>code]:text-gray-800
                [&>code]:font-mono [&>code]:text-[0.9em]"
@@ -340,7 +337,7 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
           h3: ({ children, ...rest }) => (
             <h3
               {...rest}
-              className="text-xl font-semibold text-[#212B36] mt-5 mb-2
+              className="text-xl font-semibold text-[#212B36] dark:text-gray-100 mt-5 mb-2
                [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded-md
                [&>code]:bg-gray-100 [&>code]:text-gray-800
                [&>code]:font-mono [&>code]:text-[0.9em]"
@@ -351,7 +348,7 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
           h4: ({ children, ...rest }) => (
             <h4
               {...rest}
-              className="text-lg font-semibold text-[#212B36] mt-4 mb-2
+              className="text-lg font-semibold text-[#212B36] dark:text-gray-100 mt-4 mb-2
                [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded-md
                [&>code]:bg-gray-100 [&>code]:text-gray-800
                [&>code]:font-mono [&>code]:text-[0.9em]"
@@ -362,7 +359,7 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
           h5: ({ children, ...rest }) => (
             <h5
               {...rest}
-              className="text-base font-medium text-[#212B36] mt-3 mb-1.5
+              className="text-base font-medium text-[#212B36] dark:text-gray-100 mt-3 mb-1.5
                [&>code]:px-1 [&>code]:py-0.5 [&>code]:rounded-md
                [&>code]:bg-gray-100 [&>code]:text-gray-800
                [&>code]:font-mono [&>code]:text-[0.9em]"
@@ -370,53 +367,47 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
               {children}
             </h5>
           ),
-          // Text elements
-          p: (props) => {
-            // Skip if it’s a CodePen embed (has className 'codepen')
-            if (props?.className?.includes('codepen')) {
-              return <p {...props} />;
-            }
-          
-            return <p {...props} className="mb-4 text-[15px] leading-7 text-[#1B2633]" />;
-          },
+          p: (props) => (
+            <p {...props} className="mb-4 text-[15px] leading-7 text-[#1B2633] dark:text-gray-300" />
+          ),
           ul: (props) => (
             <ul
               {...props}
-              className="list-disc pl-6 space-y-2 mb-4 text-[15px] leading-7 text-[#1B2633]"
+              className="list-disc pl-6 space-y-2 mb-4 text-[15px] leading-7 text-[#1B2633] dark:text-gray-300"
             />
           ),
           ol: (props) => (
             <ol
               {...props}
-              className="list-decimal pl-6 space-y-2 mb-4 text-[15px] leading-7 text-[#1B2633]"
+              className="list-decimal pl-6 space-y-2 mb-4 text-[15px] leading-7 text-[#1B2633] dark:text-gray-300"
             />
           ),
-          li: (props) => <li {...props} className="text-[15px] leading-7 text-[#1B2633]" />,
+          li: (props) => <li {...props} className="text-[15px] leading-7 text-[#1B2633] dark:text-gray-300" />,
 
           // Tables
           table: ({ node, ...props }) => (
             <div className="overflow-x-auto my-6">
               <table
                 {...props}
-                className="min-w-full border border-gray-300 divide-y divide-gray-300 text-[15px] text-[#1B2633] rounded-lg"
+                className="min-w-full border border-gray-300 dark:border-gray-700 divide-y divide-gray-300 dark:divide-gray-700 text-[15px] text-[#1B2633] dark:text-gray-300 rounded-lg"
               />
             </div>
           ),
           thead: ({ node, ...props }) => (
-            <thead {...props} className="bg-gray-100 text-[#212B36] font-semibold" />
+            <thead {...props} className="bg-gray-100 dark:bg-gray-800 text-[#212B36] dark:text-gray-100 font-semibold" />
           ),
-          tbody: ({ node, ...props }) => <tbody {...props} className="divide-y divide-gray-200" />,
+          tbody: ({ node, ...props }) => <tbody {...props} className="divide-y divide-gray-200 dark:divide-gray-700" />,
           tr: ({ node, ...props }) => (
-            <tr {...props} className="hover:bg-gray-50 transition-colors" />
+            <tr {...props} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" />
           ),
           th: ({ node, ...props }) => (
             <th
               {...props}
-              className="px-4 py-2 border border-gray-300 text-left font-medium text-[15px]"
+              className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-left font-medium text-[15px]"
             />
           ),
           td: ({ node, ...props }) => (
-            <td {...props} className="px-4 py-2 border border-gray-200 align-top" />
+            <td {...props} className="px-4 py-2 border border-gray-200 dark:border-gray-700 align-top" />
           ),
 
           // Code blocks
@@ -429,7 +420,7 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
               return (
                 <code
                   {...rest}
-                  className="rounded-md px-1.5 py-0.5 bg-gray-100 text-gray-800 font-mono text-[0.9em]"
+                  className="rounded-md px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-mono text-[0.9em]"
                   style={{
                     fontFamily:
                       "'Fira Code', 'JetBrains Mono', 'Menlo', 'Consolas', 'Courier New', monospace",
@@ -442,9 +433,9 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
 
             // ✅ Otherwise, render fenced / multiline blocks
             return (
-              <div className="my-4 overflow-auto rounded-lg bg-gray-100 border border-gray-200">
+              <div className="my-4 overflow-auto rounded-lg bg-gray-100 dark:bg-[#0f1420] border border-gray-200 dark:border-gray-700">
                 <SyntaxHighlighter
-                  style={duotoneLight}
+                  style={isDark ? vscDarkPlus : duotoneLight}
                   language={match ? match[1] : undefined}
                   PreTag="div"
                   showLineNumbers
@@ -455,8 +446,8 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
                     fontSize: "0.9rem",
                     lineHeight: 1.6,
                     borderRadius: "0.5rem",
-                    background: "#F8F9FA",
-                    color: "#1B2633",
+                    background: isDark ? "#0f1420" : "#F8F9FA",
+                    color: isDark ? "#E5E7EB" : "#1B2633",
                     fontFamily:
                       "'Fira Code', 'JetBrains Mono', 'Menlo', 'Consolas', 'Courier New', monospace",
                   }}
@@ -477,6 +468,16 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
               title={props["data-title"]}
               color={props["data-color"]}
               text={decodeURIComponent(props["data-text"])}
+            />
+          ),
+
+          // CodePen embeds — rendered by a self-contained component so React
+          // doesn't try to manage the DOM nodes that CodePen replaces.
+          "codepen-block": (props: any) => (
+            <CodepenBlock
+              user={props["data-user"]}
+              slug={props["data-slug"]}
+              height={Number(props["data-height"]) || 400}
             />
           ),
         }}

@@ -36,7 +36,7 @@ export default async function Page({ params }: Params) {
     moduleSlug,
     weekSlug,
     daySlug,
-  } = params;
+  } = await params;
 
   // 🔌 Connect to MongoDB
   await connectDB();

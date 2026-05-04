@@ -10,7 +10,9 @@ export default function CodepenEmbed() {
     document.body.appendChild(script);
 
     return () => {
-      document.body.removeChild(script);
+      // Use Element.remove() — no-op if the node is already detached, which can
+      // happen because the CodePen embed script mutates the surrounding DOM.
+      script.remove();
     };
   }, []);
 

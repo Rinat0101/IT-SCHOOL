@@ -36,7 +36,7 @@ const WeekTabs: React.FC<WeekTabsProps> = ({
               ${
                 selectedWeekId === week.id
                   ? "bg-[#B923AE] text-white"
-                  : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                  : "bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-700"
               }`}
           >
             {cleanTitle(week.title)}

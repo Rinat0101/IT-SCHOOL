@@ -50,7 +50,7 @@ export default function DaySidebar({
         <div className="flex items-center gap-2">
           <Link
             href={sectionHref}
-            className="text-gray-600 hover:text-black flex items-center"
+            className="text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-gray-100 flex items-center"
             aria-label="Back to section"
             title="Back to section"
           >
@@ -68,7 +68,7 @@ export default function DaySidebar({
             </svg>
           </Link>
 
-          <h2 className="text-sm font-semibold uppercase text-[#212B36]">
+          <h2 className="text-sm font-semibold uppercase text-[#212B36] dark:text-gray-100">
             {currentDayTitle}
           </h2>
         </div>
@@ -94,7 +94,7 @@ export default function DaySidebar({
               {/* Connecting line */}
               {idx < sorted.length - 1 && (
                 <div
-                  className="absolute left-4 w-px bg-gray-300 z-0"
+                  className="absolute left-4 w-px bg-gray-300 dark:bg-gray-700 z-0"
                   style={{
                     top: `calc(${size / 2}px + 0.6rem)`,
                     bottom: "-1.25rem",
@@ -104,7 +104,7 @@ export default function DaySidebar({
 
               {/* Circle */}
               <div
-                className="absolute top-5 left-4 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center transition-all duration-200 z-10 bg-white"
+                className="absolute top-5 left-4 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center transition-all duration-200 z-10"
                 style={{
                   width: `${size}px`,
                   height: `${size}px`,
@@ -112,7 +112,10 @@ export default function DaySidebar({
                   border: `2px solid ${
                     isCompleted ? "#00AB55" : isActive ? "#00AB55" : "#C1C7D0"
                   }`,
-                  backgroundColor: isCompleted ? "#00AB55" : "white", // ✅ white background to cover the line
+                  // Uses --background CSS var which flips with the theme so the circle masks the line.
+                  backgroundColor: isCompleted ? "#00AB55" : "var(--background)",
+                  // Thin white ring around the active lesson's indicator.
+                  boxShadow: isActive ? "0 0 0 1.5px #FFFFFF" : undefined,
                 }}
                 aria-hidden
               >
@@ -142,13 +145,13 @@ export default function DaySidebar({
 
                 <h4
                   className={`mt-1 text-sm font-bold transition-all duration-200 ${
-                    isActive ? "text-[#000] text-[15px]" : "text-[#212B36]"
+                    isActive ? "text-[#000] dark:text-white text-[15px]" : "text-[#212B36] dark:text-gray-200"
                   }`}
                 >
                   <Link
                     href={href}
                     className={`hover:underline ${
-                      isCompleted ? "text-gray-500" : ""
+                      isCompleted ? "text-gray-500 dark:text-gray-400" : ""
                     }`}
                     {...(isActive ? { "aria-current": "page" } : {})}
                   >

@@ -223,6 +223,7 @@ export type Lesson = {
   labRepository?: string | null;
   labDescription?: string | null;          
 
+  body?: string | null;
   content: DatoCmsLessonBlock[];
   extraResources?: ExtraResourceBlock[] | null;
 

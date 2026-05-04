@@ -18,7 +18,7 @@ export default function TextBlock({ id, title, content, subsections }: TextBlock
   return (
     <div className="mb-6">
       {title && (
-        <h2 id={`sec-${id}`} className="text-xl font-semibold text-[#202733] mb-2">
+        <h2 id={`sec-${id}`} className="text-xl font-semibold text-[#202733] dark:text-gray-100 mb-2">
           {title}
         </h2>
       )}

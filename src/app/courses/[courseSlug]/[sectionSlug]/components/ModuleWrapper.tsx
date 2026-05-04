@@ -7,6 +7,7 @@ import WeekTabs from "./WeekTabs";
 import DayView from "./DayView";
 import Link from "next/link";
 import { sortBy } from "@/app/utils/sort";
+import { cleanTitle } from "@/app/utils/cleanTitles";
 
 interface ModuleWrapperProps {
   enrollment?: any;
@@ -23,8 +24,25 @@ const ModuleWrapper = ({ enrollment, userProgress }: ModuleWrapperProps) => {
   const selectedSection = useCourseStore((s) => s.selectedSection);
   const selectedModule = useCourseStore((s) => s.selectedModule);
   const setSelectedModule = useCourseStore((s) => s.setSelectedModule);
+  const storeCompleted = useCourseStore((s) => s.completedLessons);
+  const setStoreCompleted = useCourseStore((s) => s.setCompletedLessons);
 
   const accessLevel = enrollment?.accessLevel ?? "limited"; // 🟣 default limited
+
+  // Hydrate the store with server-side completion data on mount.
+  // After this, reads come from the store so updates from CompletedButton on the
+  // lesson page are reflected here when the user navigates back.
+  useEffect(() => {
+    if (userProgress?.completedLessons) {
+      setStoreCompleted(userProgress.completedLessons);
+    }
+  }, [userProgress?.completedLessons, setStoreCompleted]);
+
+  // Source of truth: store (so live updates propagate). Fall back to the server
+  // prop on the very first render — before the hydrating useEffect has fired —
+  // so the user sees their completed lessons without needing a refresh.
+  const effectiveCompleted =
+    storeCompleted.length > 0 ? storeCompleted : userProgress?.completedLessons ?? [];
 
   // Default selection logic
   useEffect(() => {
@@ -67,7 +85,7 @@ const ModuleWrapper = ({ enrollment, userProgress }: ModuleWrapperProps) => {
     (acc, l) => acc + (l.lessonType === "Lab" ? 2 : 1),
     0
   );
-  const completedLessons = userProgress?.completedLessons ?? [];
+  const completedLessons = effectiveCompleted;
   const completedWeight = mandatoryLessons.reduce((acc, l) => {
     if (completedLessons.includes(l.id)) {
       return acc + (l.lessonType === "Lab" ? 2 : 1);
@@ -87,13 +105,13 @@ const ModuleWrapper = ({ enrollment, userProgress }: ModuleWrapperProps) => {
   };
 
   return (
-    <div className="bg-[#F9FAFB] pt-2 rounded-b-lg shadow-md">
+    <div className="bg-[#F9FAFB] dark:bg-[#0f1420] pt-2 rounded-lg dialog-shadow dark:border dark:border-gray-800">
       {/* Header */}
       <div className="grid grid-cols-3 items-center m-4">
         <div className="justify-self-start">
           <Link
             href={courseSlug ? `/courses/${courseSlug}` : "#"}
-            className="text-[#B923AE] text-sm font-bold hover:underline inline-flex items-center h-8"
+            className="text-[#B923AE] dark:text-[#F4B8FF] text-sm font-bold hover:underline inline-flex items-center h-8"
           >
             ← Back
           </Link>
@@ -116,21 +134,21 @@ const ModuleWrapper = ({ enrollment, userProgress }: ModuleWrapperProps) => {
                     }}
                     className={`pb-[2px] transition-colors whitespace-nowrap border-b-2 ${
                       locked
-                        ? "text-gray-400 cursor-not-allowed border-transparent"
+                        ? "text-gray-400 dark:text-gray-600 cursor-not-allowed border-transparent"
                         : mod.id === selectedModule?.id
-                        ? "text-[#B923AE] border-[#B923AE]"
-                        : "text-gray-600 hover:text-gray-900 border-transparent"
+                        ? "text-[#B923AE] dark:text-[#F4B8FF] border-[#B923AE] dark:border-[#F4B8FF]"
+                        : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 border-transparent"
                     }`}
                   >
-                    {mod.title}
+                    {cleanTitle(mod.title)}
                   </button>
 
                   {locked && (
-                    <span className="ml-1 text-gray-400 text-xs">🔒</span>
+                    <span className="ml-1 text-gray-400 dark:text-gray-500 text-xs">🔒</span>
                   )}
 
                   {idx < (selectedSection?.modules?.length ?? 0) - 1 && (
-                    <span className="mx-4 text-gray-300 select-none">•</span>
+                    <span className="mx-4 text-gray-300 dark:text-gray-600 select-none">•</span>
                   )}
                 </div>
               );
@@ -144,24 +162,24 @@ const ModuleWrapper = ({ enrollment, userProgress }: ModuleWrapperProps) => {
       {/* Progress bar */}
       <div className="px-6 mb-4">
         <div className="flex items-center gap-2">
-          <div className="flex-1 h-[4px] rounded-full bg-gray-200 relative overflow-hidden">
+          <div className="flex-1 h-[4px] rounded-full bg-gray-200 dark:bg-gray-700 relative overflow-hidden">
             <div
               className="absolute left-0 top-0 h-[5px] bg-gradient-to-r from-[#B923AE] to-[#F4B8FF] transition-all duration-500 rounded-full"
               style={{ width: `${moduleProgress}%` }}
             />
           </div>
-          <span className="text-md font-bold text-gray-600">{moduleProgress}%</span>
+          <span className="text-md font-bold text-gray-600 dark:text-gray-300">{moduleProgress}%</span>
         </div>
       </div>
 
       {/* Main content */}
-      <div className="rounded-xl bg-white px-6 py-4 md:px-8 shadow-sm">
+      <div className="rounded-xl bg-white dark:bg-[#0f1420] px-6 py-4 md:px-8">
         {accessLevel === "limited" && isModuleLocked(
           selectedSection?.modules?.findIndex(
             (m) => m.id === selectedModule?.id
           ) ?? 999
         ) ? (
-          <div className="flex flex-col items-center justify-center h-[50vh] text-gray-500">
+          <div className="flex flex-col items-center justify-center h-[50vh] text-gray-500 dark:text-gray-400">
             <p className="text-lg font-semibold">🔒 Module locked</p>
             <p className="text-sm">Upgrade access to view this content.</p>
           </div>
@@ -179,7 +197,7 @@ const ModuleWrapper = ({ enrollment, userProgress }: ModuleWrapperProps) => {
               {daysSorted.map((day) => (
                 <div
                   key={day.id}
-                  className="bg-gray-50 rounded-lg p-4 h-full flex flex-col border border-gray-200"
+                  className="bg-gray-50 dark:bg-[#0f1420] rounded-lg p-4 h-full flex flex-col border border-gray-200 dark:border-gray-700"
                 >
                   <DayView
                     className="flex-1"

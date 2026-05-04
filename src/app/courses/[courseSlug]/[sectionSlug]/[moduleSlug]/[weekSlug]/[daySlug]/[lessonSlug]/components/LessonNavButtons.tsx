@@ -40,9 +40,9 @@ export default function LessonNavButtons({
   const btnBase =
     "inline-flex items-center justify-center gap-2 h-[40px] min-w-[140px] px-4 rounded-lg border text-sm font-bold transition";
   const btnPurple =
-    "border-[#D58AD7] text-[#B923AE] hover:bg-[#B923AE]/5 focus:outline-none focus:ring-2 focus:ring-[#B923AE]/30";
+    "border-[#D58AD7] text-[#B923AE] dark:text-[#F4B8FF] dark:border-[#F4B8FF]/40 hover:bg-[#B923AE]/5 dark:hover:bg-[#F4B8FF]/10 focus:outline-none focus:ring-2 focus:ring-[#B923AE]/30";
   const btnDisabled =
-    "border-gray-200 text-gray-300 cursor-not-allowed pointer-events-none";
+    "border-gray-200 dark:border-gray-700 text-gray-300 dark:text-gray-600 cursor-not-allowed pointer-events-none";
 
   return (
     <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-8 items-start">
@@ -66,7 +66,7 @@ export default function LessonNavButtons({
           </span>
         )}
 
-        <div className="mt-3 text-[14px] leading-[22px] font-normal text-[#1B2633]">
+        <div className="mt-3 text-[14px] leading-[22px] font-normal text-[#1B2633] dark:text-gray-300">
           {prev?.title ?? ""}
         </div>
       </div>
@@ -91,7 +91,7 @@ export default function LessonNavButtons({
           </span>
         )}
 
-        <div className="mt-3 text-[14px] leading-[22px] font-normal text-[#1B2633]">
+        <div className="mt-3 text-[14px] leading-[22px] font-normal text-[#1B2633] dark:text-gray-300">
           {next?.title ?? ""}
         </div>
       </div>

@@ -5,7 +5,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { duotoneLight } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { duotoneLight, vscDarkPlus } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { useTheme } from "@/hooks/useTheme";
 
 type QuizOption = { id: string; text: string; correct: boolean };
 type QuizData = {
@@ -16,6 +17,9 @@ type QuizData = {
 };
 
 export default function QuizBlock(props: any) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
   // Decode Base64-URL JSON (what your preprocessor produces)
   const data = useMemo(() => {
     const raw = props["data-json"];
@@ -68,7 +72,7 @@ export default function QuizBlock(props: any) {
           if (inline || looksInline) {
             return (
               <code
-                className="px-1 py-0.5 rounded-md bg-gray-100 text-gray-800 font-mono text-[0.9em] inline"
+                className="px-1 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-mono text-[0.9em] inline"
                 {...rest}
               >
                 {raw}
@@ -78,9 +82,9 @@ export default function QuizBlock(props: any) {
 
           // Multiline fenced block — match MarkdownRenderer style
           return (
-            <div className="my-4 overflow-auto rounded-lg bg-gray-100 border border-gray-200">
+            <div className="my-4 overflow-auto rounded-lg bg-gray-100 dark:bg-[#0f1420] border border-gray-200 dark:border-gray-700">
               <SyntaxHighlighter
-                style={duotoneLight}
+                style={isDark ? vscDarkPlus : duotoneLight}
                 language={match ? match[1] : undefined}
                 PreTag="div"
                 showLineNumbers
@@ -91,8 +95,8 @@ export default function QuizBlock(props: any) {
                   fontSize: "0.9rem",
                   lineHeight: 1.6,
                   borderRadius: "0.5rem",
-                  background: "#F8F9FA",
-                  color: "#1B2633",
+                  background: isDark ? "#0f1420" : "#F8F9FA",
+                  color: isDark ? "#E5E7EB" : "#1B2633",
                   fontFamily:
                     "'Fira Code', 'JetBrains Mono', 'Menlo', 'Consolas', 'Courier New', monospace",
                 }}
@@ -110,9 +114,9 @@ export default function QuizBlock(props: any) {
   );
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 md:p-5 my-4">
+    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1a1f29] p-4 md:p-5 my-4">
       {/* Question (inline + block code with heuristic) */}
-      <div className="text-[15px] leading-7 text-[#1B2633] font-bold mb-3">
+      <div className="text-[15px] leading-7 text-[#1B2633] dark:text-gray-200 font-bold mb-3">
         <RichMarkdown content={data.question} />
       </div>
 
@@ -128,12 +132,12 @@ export default function QuizBlock(props: any) {
             <label
               key={opt.id}
               className={[
-                "flex items-start gap-3 rounded-md border p-3 cursor-pointer transition hover:bg-gray-50",
+                "flex items-start gap-3 rounded-md border p-3 cursor-pointer transition hover:bg-gray-50 dark:hover:bg-gray-800",
                 selected && !showState
-                  ? "border-[#00AB55]/40 bg-[#00AB55]/5"
-                  : "border-gray-200 bg-white",
-                showAsCorrect ? "border-green-400 bg-green-50" : "",
-                showAsWrong ? "border-red-400 bg-red-50" : "",
+                  ? "border-[#00AB55]/40 bg-[#00AB55]/5 dark:bg-[#00AB55]/10"
+                  : "border-gray-200 dark:border-gray-700 bg-white dark:bg-[#0f1420]",
+                showAsCorrect ? "border-green-400 bg-green-50 dark:bg-green-900/30 dark:border-green-700" : "",
+                showAsWrong ? "border-red-400 bg-red-50 dark:bg-red-900/30 dark:border-red-700" : "",
               ].join(" ")}
             >
               <input
@@ -143,13 +147,13 @@ export default function QuizBlock(props: any) {
                 onChange={() => toggle(opt.id)}
                 className="mt-1"
               />
-              <span className="text-[15px] leading-7 text-[#1B2633]">
+              <span className="text-[15px] leading-7 text-[#1B2633] dark:text-gray-200">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeRaw]}
                   components={{
                     code: ({ children }) => (
-                      <code className="px-1 py-0.5 rounded-md bg-gray-100 text-gray-800 font-mono text-[0.9em] inline">
+                      <code className="px-1 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-mono text-[0.9em] inline">
                         {children}
                       </code>
                     ),
@@ -176,7 +180,7 @@ export default function QuizBlock(props: any) {
         {submitted && (
           <span
             className={`text-[14px] font-medium ${
-              isCorrect ? "text-green-700" : "text-red-700"
+              isCorrect ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"
             }`}
           >
             {isCorrect ? "Correct ✅" : "Try again ❌"}
@@ -186,7 +190,7 @@ export default function QuizBlock(props: any) {
 
       {/* Explanation (inline + block with heuristic) */}
       {submitted && data.explanation && (
-        <div className="mt-3 text-[14px] leading-6 text-[#454F5B] bg-gray-50 border border-gray-200 rounded-md p-3">
+        <div className="mt-3 text-[14px] leading-6 text-[#454F5B] dark:text-gray-300 bg-gray-50 dark:bg-[#0f1420] border border-gray-200 dark:border-gray-700 rounded-md p-3">
           <RichMarkdown content={data.explanation} />
         </div>
       )}

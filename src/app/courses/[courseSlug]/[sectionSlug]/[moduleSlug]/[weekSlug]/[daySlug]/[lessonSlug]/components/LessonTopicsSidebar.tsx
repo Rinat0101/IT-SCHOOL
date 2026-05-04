@@ -174,7 +174,7 @@ export default function LessonTopicsSidebar({
       remarkPlugins={[remarkGfm]}
       components={{
         code: ({ children }) => (
-          <code className="px-1 py-0.5 rounded-md bg-gray-100 text-gray-800 font-mono text-[0.9em]">
+          <code className="px-1 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-mono text-[0.9em]">
             {children}
           </code>
         ),
@@ -187,7 +187,7 @@ export default function LessonTopicsSidebar({
 
   return (
     <aside className={`w-full max-w-xs ${className}`}>
-      <h2 className="text-xs font-semibold tracking-[0.06em] text-[#202733] mb-3 uppercase">
+      <h2 className="text-xs font-semibold tracking-[0.06em] text-[#202733] dark:text-gray-200 mb-3 uppercase">
         Lesson topics
       </h2>
 
@@ -214,8 +214,8 @@ export default function LessonTopicsSidebar({
                   }}
                   className={`flex-1 text-left py-2 rounded-md transition leading-6 text-[15px] w-full ${
                     isActive
-                      ? "text-[#00AB55] font-semibold"
-                      : "text-[#6B778C] hover:text-[#202733] font-medium"
+                      ? "text-[#00AB55] dark:text-[#34D399] font-semibold"
+                      : "text-[#6B778C] dark:text-gray-400 hover:text-[#202733] dark:hover:text-gray-100 font-medium"
                   }`}
                 >
                   {renderMarkdown(sec.title)}
@@ -236,12 +236,12 @@ export default function LessonTopicsSidebar({
                             setActiveId(sec.id);
                             scrollToId(sub.targetId);
                           }}
-                          className="text-[13px] leading-5 text-[#6B778C] hover:text-[#202733] underline-offset-2 hover:underline"
+                          className="text-[13px] leading-5 text-[#6B778C] dark:text-gray-400 hover:text-[#202733] dark:hover:text-gray-100 underline-offset-2 hover:underline"
                         >
                           {renderMarkdown(sub.label)}
                         </a>
                       ) : (
-                        <span className="text-[13px] leading-5 text-[#6B778C]">
+                        <span className="text-[13px] leading-5 text-[#6B778C] dark:text-gray-400">
                           {renderMarkdown(sub.label)}
                         </span>
                       )}

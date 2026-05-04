@@ -31,9 +31,9 @@ export default function DayView({
 }: DayViewProps) {
 
   return (
-    <section className={`flex flex-col h-full bg-[#F9FAFB] p-4 ${className || ""}`}>
+    <section className={`flex flex-col h-full bg-[#F9FAFB] dark:bg-transparent p-4 ${className || ""}`}>
       {/* ✅ Clean the day title */}
-      <h2 className="text-lg font-bold text-[#101828] mb-3">
+      <h2 className="text-lg font-bold text-[#101828] dark:text-gray-100 mb-3">
         {cleanTitle(dayTitle)}
       </h2>
 
@@ -58,7 +58,7 @@ export default function DayView({
             );
           })
         ) : (
-          <div className="h-full min-h-[120px] border border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-400 text-sm italic">
+          <div className="h-full min-h-[120px] border border-dashed border-gray-300 dark:border-gray-700 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm italic">
             No lessons
           </div>
         )}

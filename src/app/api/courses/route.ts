@@ -6,12 +6,12 @@ import { authOptions } from "@/lib/authOptions";
 
 // ✅ Create course
 export async function POST(req: NextRequest) {
-  await connectDB();
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== "admin") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
-//   const session = await getServerSession(authOptions);
-//   if (!session || session.user.role !== "admin") {
-//     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-//   }
+  await connectDB();
 
   try {
     const body = await req.json();

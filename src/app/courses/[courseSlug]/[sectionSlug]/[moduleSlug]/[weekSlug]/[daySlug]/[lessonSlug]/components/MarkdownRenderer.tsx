@@ -8,6 +8,7 @@ import { duotoneLight, vscDarkPlus } from "react-syntax-highlighter/dist/cjs/sty
 import QuizBlock from "@/components/QuizBlock";
 import HiddenTextBlock from "@/components/HiddenTextBlock";
 import CodepenBlock from "@/components/CodepenBlock";
+import VideoBlock from "@/components/VideoBlock";
 import { useTheme } from "@/hooks/useTheme";
 
 type Props = {
@@ -209,6 +210,25 @@ function preprocessDirectives(markdown: string): string {
     /(codepen:)?https:\/\/codepen\.io\/([^/]+)\/pen\/([a-zA-Z0-9]+)/g,
     (_, _prefix: string, user: string, slug: string) =>
       `<codepen-block data-user="${user}" data-slug="${slug}" data-height="400"></codepen-block>`
+  );
+
+  // --- Video embeds: YouTube / Vimeo / Loom ---
+  // Detect video URLs and convert them to a custom <video-block> element. The
+  // VideoBlock component renders the appropriate provider iframe at 16:9.
+  // YouTube: youtube.com/watch?v=ID, youtu.be/ID, youtube.com/embed/ID
+  markdown = markdown.replace(
+    /https?:\/\/(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{6,})\S*/g,
+    (_, id) => `<video-block data-provider="youtube" data-id="${id}"></video-block>`
+  );
+  // Vimeo: vimeo.com/123456789
+  markdown = markdown.replace(
+    /https?:\/\/(?:www\.)?vimeo\.com\/(\d+)\S*/g,
+    (_, id) => `<video-block data-provider="vimeo" data-id="${id}"></video-block>`
+  );
+  // Loom: loom.com/share/ID or loom.com/embed/ID
+  markdown = markdown.replace(
+    /https?:\/\/(?:www\.)?loom\.com\/(?:share|embed)\/([a-zA-Z0-9]+)\S*/g,
+    (_, id) => `<video-block data-provider="loom" data-id="${id}"></video-block>`
   );
 
   // --- Quizzes ---
@@ -478,6 +498,14 @@ export default function MarkdownRenderer({ content, className = "" }: Props) {
               user={props["data-user"]}
               slug={props["data-slug"]}
               height={Number(props["data-height"]) || 400}
+            />
+          ),
+
+          // Video embeds (YouTube / Vimeo / Loom) — auto-detected from URLs.
+          "video-block": (props: any) => (
+            <VideoBlock
+              provider={props["data-provider"]}
+              id={props["data-id"]}
             />
           ),
         }}

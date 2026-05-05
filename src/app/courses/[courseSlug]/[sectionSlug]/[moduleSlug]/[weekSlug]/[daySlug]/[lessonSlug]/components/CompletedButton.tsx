@@ -37,15 +37,15 @@ export default function CompletedButton({
         }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
       if (res.ok && Array.isArray(data.completedLessons)) {
-        setCompletedLessons(data.completedLessons); // ✅ update global state
+        setCompletedLessons(data.completedLessons);
       } else {
-        console.error("❌ Failed to update progress:", data.error);
+        console.error("Failed to update progress:", data.error || res.statusText);
       }
     } catch (err) {
-      console.error("❌ Toggle error:", err);
+      console.error("Toggle error:", err);
     } finally {
       setIsLoading(false);
     }

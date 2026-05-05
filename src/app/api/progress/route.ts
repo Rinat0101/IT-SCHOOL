@@ -19,6 +19,10 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Missing required data" }, { status: 400 });
     }
 
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      return NextResponse.json({ error: "Invalid courseId" }, { status: 400 });
+    }
+
     await connectDB();
 
     const userObjectId = new mongoose.Types.ObjectId(session.user.id);
@@ -43,7 +47,15 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ success: true, completedLessons: progress.completedLessons });
   } catch (err) {
-    console.error("Error updating progress:", err);
-    return NextResponse.json({ error: "Failed to update progress" }, { status: 500 });
+    console.error("[/api/progress] error:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json(
+      {
+        error: "Failed to update progress",
+        // surface details in dev so we can debug without trawling server logs
+        ...(process.env.NODE_ENV !== "production" && { detail: message }),
+      },
+      { status: 500 }
+    );
   }
 }
